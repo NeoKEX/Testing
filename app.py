@@ -9,10 +9,11 @@ app = Flask(__name__)
 CORS(app)
 
 dreamina_service = None
+MOCK_MODE = os.environ.get('MOCK_MODE', 'false').lower() == 'true'
 
 def init_service():
     global dreamina_service
-    if dreamina_service is None:
+    if dreamina_service is None and not MOCK_MODE:
         dreamina_service = DreaminaService()
     return dreamina_service
 
@@ -29,22 +30,33 @@ def home():
         'status': 'success',
         'message': 'Dreamina API Server is running',
         'version': '1.0.0',
+        'mock_mode': MOCK_MODE,
         'endpoints': {
             '/api/generate/image': 'Generate AI Image (GET)',
             '/api/health': 'Health check endpoint (GET)',
             '/api/generate/video': 'Generate AI Video (GET) - Not implemented',
             '/api/status/<task_id>': 'Check generation status (GET) - Not implemented'
-        }
+        },
+        'note': 'Running in MOCK mode in Replit - Deploy to Render for real functionality' if MOCK_MODE else 'Production mode'
     })
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
+        if MOCK_MODE:
+            return jsonify({
+                'status': 'success',
+                'authenticated': True,
+                'mock_mode': True,
+                'message': 'Running in MOCK mode - deploy to Render for real functionality'
+            })
+        
         service = init_service()
         is_authenticated = service.check_authentication()
         return jsonify({
             'status': 'success',
             'authenticated': is_authenticated,
+            'mock_mode': False,
             'message': 'Service is healthy' if is_authenticated else 'Authentication required'
         })
     except Exception as e:
@@ -67,6 +79,22 @@ def generate_image():
         aspect_ratio = request.args.get('aspect_ratio', '1:1')
         quality = request.args.get('quality', 'high')
         model = request.args.get('model', 'image_4.0')
+        
+        if MOCK_MODE:
+            return jsonify({
+                'status': 'success',
+                'mock_mode': True,
+                'prompt': prompt,
+                'model': model,
+                'aspect_ratio': aspect_ratio,
+                'quality': quality,
+                'images': [
+                    'https://example.com/mock_image_1.jpg',
+                    'https://example.com/mock_image_2.jpg'
+                ],
+                'count': 2,
+                'message': 'MOCK response - Deploy to Render for real image generation'
+            })
         
         service = init_service()
         result = service.generate_image(
@@ -103,4 +131,10 @@ def check_status(task_id):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
+    if MOCK_MODE:
+        print("=" * 60)
+        print("RUNNING IN MOCK MODE")
+        print("Selenium/Chrome disabled - API returns mock responses")
+        print("Deploy to Render for real Dreamina image generation")
+        print("=" * 60)
     app.run(host='0.0.0.0', port=port, debug=False)

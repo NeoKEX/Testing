@@ -58,20 +58,25 @@ class DreaminaService:
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
         # Find chromium binary in Nix store
-        chromium_paths = glob.glob('/nix/store/*-chromium-*/bin/chromium')
+        chromium_paths = sorted(glob.glob('/nix/store/*-chromium-*/bin/chromium'))
         if chromium_paths:
-            chrome_options.binary_location = chromium_paths[0]
+            chrome_options.binary_location = chromium_paths[-1]
+            print(f"Using Chromium: {chromium_paths[-1]}")
+        else:
+            raise Exception("Chromium binary not found in /nix/store")
             
         # Find chromedriver binary in Nix store
-        chromedriver_paths = glob.glob('/nix/store/*-chromedriver-*/bin/chromedriver')
+        chromedriver_paths = sorted(glob.glob('/nix/store/*-chromedriver-*/bin/chromedriver'))
         
         try:
             if chromedriver_paths:
                 # Use system chromedriver
-                service = Service(chromedriver_paths[0])
+                service = Service(chromedriver_paths[-1])
+                print(f"Using ChromeDriver: {chromedriver_paths[-1]}")
                 self.driver = webdriver.Chrome(service=service, options=chrome_options)
             else:
                 # Fallback to webdriver-manager
+                print("Using webdriver-manager for ChromeDriver")
                 self.driver = webdriver.Chrome(
                     service=Service(ChromeDriverManager().install()),
                     options=chrome_options
