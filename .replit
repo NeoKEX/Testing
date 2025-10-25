@@ -27,9 +27,13 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "MOCK_MODE=true python app.py"
+args = "python app.py"
 waitForPort = 8080
 
 [[ports]]
 localPort = 8080
 externalPort = 8080
+
+[[ports]]
+localPort = 40799
+externalPort = 80

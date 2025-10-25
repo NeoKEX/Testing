@@ -57,22 +57,47 @@ class DreaminaService:
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
-        # Find chromium binary in Nix store
+        # Try to find Chrome/Chromium binary in multiple locations
+        chrome_found = False
+        
+        # 1. Try Nix store (Replit environment)
         chromium_paths = sorted(glob.glob('/nix/store/*-chromium-*/bin/chromium'))
         if chromium_paths:
             chrome_options.binary_location = chromium_paths[-1]
-            print(f"Using Chromium: {chromium_paths[-1]}")
+            print(f"Using Chromium from Nix: {chromium_paths[-1]}")
+            chrome_found = True
         else:
-            raise Exception("Chromium binary not found in /nix/store")
+            # 2. Try standard Linux locations (Render/production)
+            standard_paths = [
+                '/usr/bin/google-chrome',
+                '/usr/bin/chromium',
+                '/usr/bin/chromium-browser',
+                '/opt/google/chrome/chrome',
+                '/opt/google/chrome/google-chrome'
+            ]
+            for path in standard_paths:
+                if os.path.exists(path):
+                    chrome_options.binary_location = path
+                    print(f"Using Chrome from standard location: {path}")
+                    chrome_found = True
+                    break
+        
+        if not chrome_found:
+            print("Chrome/Chromium binary not found in standard locations, using default")
             
-        # Find chromedriver binary in Nix store
+        # Find chromedriver binary
         chromedriver_paths = sorted(glob.glob('/nix/store/*-chromedriver-*/bin/chromedriver'))
         
         try:
             if chromedriver_paths:
-                # Use system chromedriver
+                # Use Nix chromedriver (Replit)
                 service = Service(chromedriver_paths[-1])
-                print(f"Using ChromeDriver: {chromedriver_paths[-1]}")
+                print(f"Using ChromeDriver from Nix: {chromedriver_paths[-1]}")
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            elif os.path.exists('/usr/bin/chromedriver'):
+                # Use system chromedriver (Render)
+                service = Service('/usr/bin/chromedriver')
+                print(f"Using ChromeDriver from system: /usr/bin/chromedriver")
                 self.driver = webdriver.Chrome(service=service, options=chrome_options)
             else:
                 # Fallback to webdriver-manager
