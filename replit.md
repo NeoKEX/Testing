@@ -32,8 +32,10 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - `dreamina_service.py` - Selenium automation for Dreamina interaction
 - `account.json.example` - Template for user cookie configuration
 - `requirements.txt` - Python dependencies
-- `vercel.json` - Vercel deployment configuration
-- `render.yaml` - Render deployment configuration
+- `Dockerfile` - Docker image for Render deployment with Chrome/ChromeDriver
+- `.dockerignore` - Docker build exclusions
+- `render.yaml` - Render deployment configuration (uses Docker)
+- `vercel.json` - Vercel deployment configuration (legacy)
 
 ### API Endpoints
 1. `GET /` - API information and health

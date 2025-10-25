@@ -127,29 +127,38 @@ Returns HTTP 501 - Not Implemented
 
 ## Deployment
 
-### Vercel
+### Render (Recommended)
 
-1. Install Vercel CLI:
-```bash
-npm i -g vercel
-```
-
-2. Deploy:
-```bash
-vercel
-```
-
-3. Upload your `account.json` via Vercel dashboard or CLI
-
-**Note:** Selenium may have limitations on Vercel's serverless platform. Consider using Render for better compatibility.
-
-### Render
+This project is configured to deploy on Render using Docker for the best compatibility with Chrome/Selenium.
 
 1. Create a new Web Service on [Render](https://render.com)
 2. Connect your repository
-3. Render will automatically detect `render.yaml`
-4. Add your `account.json` content as a secret file in Render dashboard
+3. Render will automatically detect `render.yaml` and build the Docker image
+4. Add your `account.json` content as a secret file in Render dashboard:
+   - Go to your service settings
+   - Navigate to "Secret Files"
+   - Add a file named `account.json` with your cookie data
 5. Deploy!
+
+The Docker image automatically installs:
+- Google Chrome Stable
+- ChromeDriver (matching version)
+- All Python dependencies
+
+**Note:** Render's free tier has 512MB RAM - this should be sufficient for basic image generation but may struggle under heavy load.
+
+### Local Docker Testing
+
+To test the Docker setup locally:
+
+```bash
+docker build -t dreamina-api .
+docker run -p 8080:8080 -v $(pwd)/account.json:/app/account.json dreamina-api
+```
+
+### Vercel (Not Recommended)
+
+Selenium has limitations on Vercel's serverless platform. Use Render for better compatibility.
 
 ## Environment Variables
 
