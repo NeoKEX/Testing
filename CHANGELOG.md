@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0] - 2025-10-25 - Updated Page Navigation
+
+### Changed
+- **Updated URL**: Now navigates to `/ai-tool/home/` instead of `/ai-tool/generate`
+- **Button Selectors**: Added "See results" button detection based on actual page structure
+- **Better Debugging**: Added page URL and title logging for troubleshooting
+
+### Improved
+- More accurate button detection based on Dreamina's actual UI
+- First selector now looks for "See results" button (visible on the page)
+- Better alignment with Dreamina's current interface
+
 ## [1.1.0] - 2025-10-25 - Improved Selenium Reliability
 
 ### Fixed

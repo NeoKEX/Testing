@@ -16,6 +16,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 class DreaminaService:
     def __init__(self):
         self.base_url = "https://dreamina.capcut.com"
+        self.home_url = "https://dreamina.capcut.com/ai-tool/home/"
         self.cookies = self.load_cookies()
         self.driver = None
         
@@ -169,8 +170,12 @@ class DreaminaService:
             driver = self.init_driver()
             self.apply_cookies()
             
-            driver.get(f"{self.base_url}/ai-tool/generate")
+            # Navigate to home page first
+            driver.get(self.home_url)
             time.sleep(5)
+            
+            print(f"Navigated to: {driver.current_url}")
+            print(f"Page title: {driver.title}")
             
             # Find and fill prompt input with retry logic - try multiple selectors
             max_retries = 3
@@ -231,14 +236,20 @@ class DreaminaService:
             button_clicked = False
             
             # List of button selectors to try (in order of preference)
+            # Based on Dreamina's actual page structure
             button_selectors = [
-                # Try by text content (case insensitive)
+                # Look for "See results" or similar result/generate buttons
+                (By.XPATH, "//button[contains(., 'See results')]"),
+                (By.XPATH, "//button[contains(., 'results')]"),
+                (By.XPATH, "//button[contains(., 'Generate')]"),
+                (By.XPATH, "//button[contains(., 'generate')]"),
                 (By.XPATH, "//button[contains(translate(., 'GENERATE', 'generate'), 'generate')]"),
                 (By.XPATH, "//button[contains(translate(., 'CREATE', 'create'), 'create')]"),
                 # Try by common class patterns
                 (By.CSS_SELECTOR, "button[class*='generate']"),
                 (By.CSS_SELECTOR, "button[class*='submit']"),
                 (By.CSS_SELECTOR, "button[class*='create']"),
+                (By.CSS_SELECTOR, "button[class*='result']"),
                 # Try by type
                 (By.XPATH, "//button[@type='submit']"),
                 # Try any button with generate-related attributes
