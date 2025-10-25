@@ -153,13 +153,28 @@ class DreaminaService:
         """Perform automated login using email and password"""
         try:
             driver = self.init_driver()
-            print("Starting automated email login...")
+            print("=" * 60)
+            print("STARTING AUTOMATED EMAIL LOGIN")
+            print(f"Email: {email[:3]}...{email[-10:]}")  # Show partial email for debugging
+            print("=" * 60)
             
             # Navigate to Dreamina homepage
+            print(f"Navigating to: {self.base_url}")
             driver.get(self.base_url)
+            print(f"Current URL after navigation: {driver.current_url}")
+            print(f"Page title: {driver.title}")
+            
+            # Save initial screenshot
+            try:
+                driver.save_screenshot('/tmp/login_step1_homepage.png')
+                print("✓ Saved screenshot: /tmp/login_step1_homepage.png")
+            except Exception as e:
+                print(f"Could not save screenshot: {e}")
+            
             time.sleep(3)
             
             # Look for and click the "Continue with email" button
+            print("\nStep 1: Looking for 'Continue with email' button...")
             email_button_found = False
             email_button_selectors = [
                 (By.XPATH, "//button[contains(text(), 'Continue with email')]"),
@@ -168,49 +183,81 @@ class DreaminaService:
                 (By.CSS_SELECTOR, "button[class*='email']"),
             ]
             
-            for selector_type, selector_value in email_button_selectors:
+            for i, (selector_type, selector_value) in enumerate(email_button_selectors):
                 try:
+                    print(f"  Trying selector {i+1}/{len(email_button_selectors)}: {selector_value}")
                     email_btn = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((selector_type, selector_value))
                     )
                     driver.execute_script("arguments[0].click();", email_btn)
-                    print("✓ Clicked 'Continue with email' button")
+                    print("  ✓ Clicked 'Continue with email' button")
                     email_button_found = True
+                    
+                    # Save screenshot after clicking
+                    try:
+                        driver.save_screenshot('/tmp/login_step2_after_email_button.png')
+                        print("  ✓ Saved screenshot: /tmp/login_step2_after_email_button.png")
+                    except:
+                        pass
+                    
                     time.sleep(2)
                     break
-                except (TimeoutException, Exception):
+                except (TimeoutException, Exception) as e:
+                    print(f"  ✗ Selector failed: {str(e)[:50]}")
                     continue
             
             if not email_button_found:
-                print("Could not find 'Continue with email' button, trying to find email input directly...")
+                print("  ⚠ Could not find 'Continue with email' button")
+                print("  → Trying to find email input directly...")
+                # Save screenshot for debugging
+                try:
+                    driver.save_screenshot('/tmp/login_step2_no_email_button.png')
+                    print("  ✓ Saved screenshot: /tmp/login_step2_no_email_button.png")
+                except:
+                    pass
             
             # Enter email
+            print("\nStep 2: Entering email...")
             email_input_found = False
             email_selectors = [
                 (By.CSS_SELECTOR, "input[type='email']"),
                 (By.CSS_SELECTOR, "input[placeholder*='email' i]"),
                 (By.CSS_SELECTOR, "input[name='email']"),
                 (By.XPATH, "//input[@type='text' and contains(@placeholder, 'email')]"),
+                (By.CSS_SELECTOR, "input[type='text']"),
             ]
             
-            for selector_type, selector_value in email_selectors:
+            for i, (selector_type, selector_value) in enumerate(email_selectors):
                 try:
+                    print(f"  Trying selector {i+1}/{len(email_selectors)}: {selector_value}")
                     email_input = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((selector_type, selector_value))
                     )
                     email_input.clear()
                     email_input.send_keys(email)
-                    print("✓ Email entered")
+                    print(f"  ✓ Email entered: {email[:3]}...{email[-10:]}")
                     email_input_found = True
+                    
+                    # Save screenshot after entering email
+                    try:
+                        driver.save_screenshot('/tmp/login_step3_email_entered.png')
+                        print("  ✓ Saved screenshot: /tmp/login_step3_email_entered.png")
+                    except:
+                        pass
+                    
                     time.sleep(1)
                     break
-                except (TimeoutException, Exception):
+                except (TimeoutException, Exception) as e:
+                    print(f"  ✗ Selector failed: {str(e)[:50]}")
                     continue
             
             if not email_input_found:
-                raise Exception("Could not find email input field")
+                print("  ✗ FAILED: Could not find email input field")
+                driver.save_screenshot('/tmp/login_error_no_email_input.png')
+                raise Exception("Could not find email input field. Screenshot saved to /tmp/login_error_no_email_input.png")
             
             # Enter password
+            print("\nStep 3: Entering password...")
             password_input_found = False
             password_selectors = [
                 (By.CSS_SELECTOR, "input[type='password']"),
@@ -218,24 +265,37 @@ class DreaminaService:
                 (By.CSS_SELECTOR, "input[name='password']"),
             ]
             
-            for selector_type, selector_value in password_selectors:
+            for i, (selector_type, selector_value) in enumerate(password_selectors):
                 try:
+                    print(f"  Trying selector {i+1}/{len(password_selectors)}: {selector_value}")
                     password_input = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((selector_type, selector_value))
                     )
                     password_input.clear()
                     password_input.send_keys(password)
-                    print("✓ Password entered")
+                    print("  ✓ Password entered (hidden)")
                     password_input_found = True
+                    
+                    # Save screenshot after entering password
+                    try:
+                        driver.save_screenshot('/tmp/login_step4_password_entered.png')
+                        print("  ✓ Saved screenshot: /tmp/login_step4_password_entered.png")
+                    except:
+                        pass
+                    
                     time.sleep(1)
                     break
-                except (TimeoutException, Exception):
+                except (TimeoutException, Exception) as e:
+                    print(f"  ✗ Selector failed: {str(e)[:50]}")
                     continue
             
             if not password_input_found:
-                raise Exception("Could not find password input field")
+                print("  ✗ FAILED: Could not find password input field")
+                driver.save_screenshot('/tmp/login_error_no_password_input.png')
+                raise Exception("Could not find password input field. Screenshot saved to /tmp/login_error_no_password_input.png")
             
             # Click login/submit button
+            print("\nStep 4: Clicking login button...")
             login_button_found = False
             login_button_selectors = [
                 (By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'log in')]"),
@@ -246,52 +306,94 @@ class DreaminaService:
                 (By.CSS_SELECTOR, "button[class*='login']"),
             ]
             
-            for selector_type, selector_value in login_button_selectors:
+            for i, (selector_type, selector_value) in enumerate(login_button_selectors):
                 try:
+                    print(f"  Trying selector {i+1}/{len(login_button_selectors)}: {selector_value}")
                     login_btn = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((selector_type, selector_value))
                     )
                     driver.execute_script("arguments[0].click();", login_btn)
-                    print("✓ Login button clicked")
+                    print("  ✓ Login button clicked")
                     login_button_found = True
+                    
+                    # Save screenshot after clicking
+                    try:
+                        driver.save_screenshot('/tmp/login_step5_button_clicked.png')
+                        print("  ✓ Saved screenshot: /tmp/login_step5_button_clicked.png")
+                    except:
+                        pass
+                    
                     break
-                except (TimeoutException, Exception):
+                except (TimeoutException, Exception) as e:
+                    print(f"  ✗ Selector failed: {str(e)[:50]}")
                     continue
             
             if not login_button_found:
-                raise Exception("Could not find or click login button")
+                print("  ✗ FAILED: Could not find or click login button")
+                driver.save_screenshot('/tmp/login_error_no_login_button.png')
+                raise Exception("Could not find or click login button. Screenshot saved to /tmp/login_error_no_login_button.png")
             
             # Wait for login to complete
-            print("Waiting for login to complete...")
+            print("\nStep 5: Waiting for login to complete...")
             time.sleep(5)
+            
+            # Save screenshot after waiting
+            try:
+                driver.save_screenshot('/tmp/login_step6_after_wait.png')
+                print("✓ Saved screenshot: /tmp/login_step6_after_wait.png")
+            except:
+                pass
             
             # Check if login was successful
             current_url = driver.current_url
             page_source = driver.page_source.lower()
+            print(f"Current URL after login: {current_url}")
+            print(f"Page title: {driver.title}")
+            
+            # Check for login-related keywords
+            login_keywords = ['sign in', 'log in', 'continue with google', 'continue with email']
+            found_keywords = [kw for kw in login_keywords if kw in page_source]
             
             # Check if login was successful
-            if 'sign in' not in page_source and 'log in' not in page_source:
-                print("✓ Login successful!")
+            if not found_keywords:
+                print("=" * 60)
+                print("✓✓✓ LOGIN SUCCESSFUL! ✓✓✓")
+                print("=" * 60)
                 return True
             else:
                 # Save debug screenshot
+                print("=" * 60)
+                print("✗✗✗ LOGIN FAILED ✗✗✗")
+                print(f"Found login keywords: {found_keywords}")
+                print("=" * 60)
                 try:
                     driver.save_screenshot('/tmp/login_failed.png')
-                    print("Login may have failed. Debug screenshot saved to /tmp/login_failed.png")
-                except:
-                    pass
+                    print("Debug screenshot saved to /tmp/login_failed.png")
+                    # Also save HTML
+                    with open('/tmp/login_failed.html', 'w', encoding='utf-8') as f:
+                        f.write(driver.page_source)
+                    print("Debug HTML saved to /tmp/login_failed.html")
+                except Exception as e:
+                    print(f"Could not save debug files: {e}")
                 return False
                 
         except Exception as e:
-            print(f"Login error: {str(e)}")
+            print("=" * 60)
+            print("✗✗✗ LOGIN EXCEPTION ✗✗✗")
+            print(f"Error: {str(e)}")
+            print("=" * 60)
             # Save debug screenshot on error
             try:
                 if self.driver:
-                    self.driver.save_screenshot('/tmp/login_error.png')
-                    print("Debug screenshot saved to /tmp/login_error.png")
-            except:
-                pass
-            return False
+                    self.driver.save_screenshot('/tmp/login_exception.png')
+                    print("Debug screenshot saved to /tmp/login_exception.png")
+                    # Also save HTML
+                    with open('/tmp/login_exception.html', 'w', encoding='utf-8') as f:
+                        f.write(self.driver.page_source)
+                    print("Debug HTML saved to /tmp/login_exception.html")
+            except Exception as save_err:
+                print(f"Could not save debug files: {save_err}")
+            raise  # Re-raise the exception so we can see it in logs
     
     def check_authentication(self):
         """Check if authenticated, and perform login if needed"""

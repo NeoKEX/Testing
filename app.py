@@ -106,6 +106,54 @@ def get_auth_screenshot():
         'message': 'Authentication screenshot not found. Call /api/health first to generate it.'
     }), 404
 
+@app.route('/api/debug/credentials', methods=['GET'])
+def check_credentials():
+    """Check if credentials are properly loaded (for debugging)"""
+    email = os.environ.get('DREAMINA_EMAIL')
+    password = os.environ.get('DREAMINA_PASSWORD')
+    
+    return jsonify({
+        'status': 'success',
+        'credentials_loaded': {
+            'email': bool(email),
+            'password': bool(password)
+        },
+        'email_preview': f"{email[:3]}...{email[-10:]}" if email else "Not set",
+        'password_length': len(password) if password else 0,
+        'note': 'This endpoint is for debugging only. Never expose actual credentials.'
+    })
+
+@app.route('/api/debug/login-screenshots', methods=['GET'])
+def list_login_screenshots():
+    """List all available login debug screenshots"""
+    screenshots = []
+    for file in os.listdir('/tmp'):
+        if file.startswith('login_') and file.endswith('.png'):
+            screenshots.append(f"/api/debug/login-screenshot/{file}")
+    
+    return jsonify({
+        'status': 'success',
+        'screenshots': screenshots,
+        'count': len(screenshots)
+    })
+
+@app.route('/api/debug/login-screenshot/<filename>', methods=['GET'])
+def get_login_screenshot(filename):
+    """Get a specific login debug screenshot"""
+    if not filename.endswith('.png') or not filename.startswith('login_'):
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid filename'
+        }), 400
+    
+    screenshot_path = f'/tmp/{filename}'
+    if os.path.exists(screenshot_path):
+        return send_file(screenshot_path, mimetype='image/png')
+    return jsonify({
+        'status': 'error',
+        'message': f'Screenshot {filename} not found'
+    }), 404
+
 @app.route('/api/debug/html', methods=['GET'])
 def get_debug_html():
     """Get the debug HTML if available"""
