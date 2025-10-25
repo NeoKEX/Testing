@@ -32,7 +32,11 @@ def home():
         'version': '1.0.0',
         'mock_mode': MOCK_MODE,
         'endpoints': {
-            '/api/generate/image': 'Generate AI Image (GET)',
+            '/api/generate/image': 'Generate AI Image with default model (GET)',
+            '/api/generate/image-4.0': 'Generate with Image 4.0 model (GET)',
+            '/api/generate/image-3.0': 'Generate with Image 3.0 model (GET)',
+            '/api/generate/anime': 'Generate anime style images (GET)',
+            '/api/generate/realistic': 'Generate realistic images (GET)',
             '/api/health': 'Health check endpoint (GET)',
             '/api/generate/video': 'Generate AI Video (GET) - Not implemented',
             '/api/status/<task_id>': 'Check generation status (GET) - Not implemented'
@@ -102,6 +106,134 @@ def generate_image():
             aspect_ratio=aspect_ratio,
             quality=quality,
             model=model
+        )
+        
+        if result.get('status') == 'success':
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Image generation failed: {str(e)}'
+        }), 500
+
+@app.route('/api/generate/image-4.0', methods=['GET'])
+def generate_image_4_0():
+    try:
+        prompt = request.args.get('prompt')
+        if not prompt:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required parameter: prompt'
+            }), 400
+        
+        aspect_ratio = request.args.get('aspect_ratio', '1:1')
+        quality = request.args.get('quality', 'high')
+        
+        service = init_service()
+        result = service.generate_image(
+            prompt=prompt,
+            aspect_ratio=aspect_ratio,
+            quality=quality,
+            model='image_4.0'
+        )
+        
+        if result.get('status') == 'success':
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Image generation failed: {str(e)}'
+        }), 500
+
+@app.route('/api/generate/image-3.0', methods=['GET'])
+def generate_image_3_0():
+    try:
+        prompt = request.args.get('prompt')
+        if not prompt:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required parameter: prompt'
+            }), 400
+        
+        aspect_ratio = request.args.get('aspect_ratio', '1:1')
+        quality = request.args.get('quality', 'high')
+        
+        service = init_service()
+        result = service.generate_image(
+            prompt=prompt,
+            aspect_ratio=aspect_ratio,
+            quality=quality,
+            model='image_3.0'
+        )
+        
+        if result.get('status') == 'success':
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Image generation failed: {str(e)}'
+        }), 500
+
+@app.route('/api/generate/anime', methods=['GET'])
+def generate_anime():
+    try:
+        prompt = request.args.get('prompt')
+        if not prompt:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required parameter: prompt'
+            }), 400
+        
+        aspect_ratio = request.args.get('aspect_ratio', '1:1')
+        quality = request.args.get('quality', 'high')
+        
+        service = init_service()
+        result = service.generate_image(
+            prompt=prompt,
+            aspect_ratio=aspect_ratio,
+            quality=quality,
+            model='anime'
+        )
+        
+        if result.get('status') == 'success':
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Image generation failed: {str(e)}'
+        }), 500
+
+@app.route('/api/generate/realistic', methods=['GET'])
+def generate_realistic():
+    try:
+        prompt = request.args.get('prompt')
+        if not prompt:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required parameter: prompt'
+            }), 400
+        
+        aspect_ratio = request.args.get('aspect_ratio', '1:1')
+        quality = request.args.get('quality', 'high')
+        
+        service = init_service()
+        result = service.generate_image(
+            prompt=prompt,
+            aspect_ratio=aspect_ratio,
+            quality=quality,
+            model='realistic'
         )
         
         if result.get('status') == 'success':

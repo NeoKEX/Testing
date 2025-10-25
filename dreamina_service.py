@@ -9,6 +9,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
 class DreaminaService:
@@ -151,6 +153,17 @@ class DreaminaService:
             print(f"Authentication check failed: {str(e)}")
             return False
     
+    def _retry_on_stale(self, func, max_retries=3):
+        """Retry function on stale element exception"""
+        for attempt in range(max_retries):
+            try:
+                return func()
+            except StaleElementReferenceException:
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(1)
+        return None
+    
     def generate_image(self, prompt, aspect_ratio='1:1', quality='high', model='image_4.0'):
         try:
             driver = self.init_driver()
@@ -159,60 +172,99 @@ class DreaminaService:
             driver.get(f"{self.base_url}/ai-tool/generate")
             time.sleep(5)
             
-            try:
-                prompt_input = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "textarea, input[type='text']"))
-                )
-                prompt_input.clear()
-                prompt_input.send_keys(prompt)
-            except Exception as e:
-                return {
-                    'status': 'error',
-                    'message': f'Failed to find prompt input: {str(e)}. Please check if authentication is valid.'
-                }
+            # Find and fill prompt input with retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    prompt_input = WebDriverWait(driver, 15).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "textarea[placeholder*='prompt' i], textarea, input[type='text']"))
+                    )
+                    time.sleep(1)
+                    
+                    # Clear and enter text with retry
+                    def enter_prompt():
+                        prompt_input.click()
+                        prompt_input.clear()
+                        time.sleep(0.5)
+                        prompt_input.send_keys(prompt)
+                        time.sleep(0.5)
+                        return True
+                    
+                    self._retry_on_stale(enter_prompt)
+                    break
+                except (StaleElementReferenceException, TimeoutException) as e:
+                    if attempt == max_retries - 1:
+                        return {
+                            'status': 'error',
+                            'message': f'Failed to find prompt input after {max_retries} attempts: {str(e)}. Please check if authentication is valid.'
+                        }
+                    time.sleep(2)
             
-            try:
-                generate_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Generate') or contains(text(), 'Create')]"))
-                )
-                generate_button.click()
-            except Exception as e:
-                return {
-                    'status': 'error',
-                    'message': f'Failed to click generate button: {str(e)}'
-                }
+            # Click generate button with retry logic
+            time.sleep(2)
+            for attempt in range(max_retries):
+                try:
+                    generate_button = WebDriverWait(driver, 15).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[contains(translate(text(), 'GENERATE', 'generate'), 'generate') or contains(translate(text(), 'CREATE', 'create'), 'create')]"))
+                    )
+                    time.sleep(1)
+                    
+                    def click_button():
+                        generate_button.click()
+                        return True
+                    
+                    self._retry_on_stale(click_button)
+                    break
+                except (StaleElementReferenceException, TimeoutException) as e:
+                    if attempt == max_retries - 1:
+                        return {
+                            'status': 'error',
+                            'message': f'Failed to click generate button after {max_retries} attempts: {str(e)}'
+                        }
+                    time.sleep(2)
             
-            time.sleep(10)
+            # Wait for image generation
+            print("Waiting for image generation...")
+            time.sleep(15)
             
-            try:
-                images = driver.find_elements(By.TAG_NAME, "img")
-                image_urls = []
-                for img in images:
-                    src = img.get_attribute('src')
-                    if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
-                        if src not in image_urls:
-                            image_urls.append(src)
-                
-                if image_urls:
-                    return {
-                        'status': 'success',
-                        'prompt': prompt,
-                        'model': model,
-                        'aspect_ratio': aspect_ratio,
-                        'quality': quality,
-                        'images': image_urls,
-                        'count': len(image_urls)
-                    }
-                else:
-                    return {
-                        'status': 'error',
-                        'message': 'No generated images found. Generation may still be in progress or failed.'
-                    }
-            except Exception as e:
-                return {
-                    'status': 'error',
-                    'message': f'Failed to retrieve generated images: {str(e)}'
-                }
+            # Retry finding generated images
+            for attempt in range(max_retries):
+                try:
+                    images = driver.find_elements(By.TAG_NAME, "img")
+                    image_urls = []
+                    for img in images:
+                        try:
+                            src = img.get_attribute('src')
+                            if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
+                                if src not in image_urls:
+                                    image_urls.append(src)
+                        except StaleElementReferenceException:
+                            continue
+                    
+                    if image_urls:
+                        return {
+                            'status': 'success',
+                            'prompt': prompt,
+                            'model': model,
+                            'aspect_ratio': aspect_ratio,
+                            'quality': quality,
+                            'images': image_urls,
+                            'count': len(image_urls)
+                        }
+                    elif attempt < max_retries - 1:
+                        time.sleep(5)
+                    else:
+                        return {
+                            'status': 'error',
+                            'message': 'No generated images found. Generation may still be in progress or failed.'
+                        }
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        return {
+                            'status': 'error',
+                            'message': f'Failed to retrieve generated images: {str(e)}'
+                        }
+                    time.sleep(5)
                 
         except Exception as e:
             return {
