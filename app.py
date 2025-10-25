@@ -41,17 +41,38 @@ def health_check():
     try:
         service = init_service()
         is_authenticated = service.check_authentication()
-        return jsonify({
-            'status': 'success',
-            'authenticated': is_authenticated,
-            'message': 'Service is healthy' if is_authenticated else 'Authentication required'
-        })
+        
+        if is_authenticated:
+            return jsonify({
+                'status': 'success',
+                'authenticated': True,
+                'message': 'Service is healthy and authenticated'
+            })
+        else:
+            return jsonify({
+                'status': 'warning',
+                'authenticated': False,
+                'message': 'Authentication failed - Your cookies in account.json have likely expired',
+                'action_required': 'Please update account.json with fresh cookies from https://dreamina.capcut.com',
+                'instructions': 'See README.md for cookie extraction instructions',
+                'debug_screenshot': '/api/debug/auth-screenshot'
+            }), 401
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'authenticated': False,
-            'message': str(e)
-        }), 500
+        error_msg = str(e)
+        if 'expired' in error_msg.lower():
+            return jsonify({
+                'status': 'error',
+                'authenticated': False,
+                'message': 'Cookie validation failed - Expired cookies detected',
+                'action_required': 'Please update account.json with fresh cookies',
+                'error_details': error_msg
+            }), 401
+        else:
+            return jsonify({
+                'status': 'error',
+                'authenticated': False,
+                'message': f'Health check failed: {error_msg}'
+            }), 500
     finally:
         if service:
             service.close()
@@ -65,6 +86,17 @@ def get_debug_screenshot():
     return jsonify({
         'status': 'error',
         'message': 'Debug screenshot not found. Generate an image first to create debug files.'
+    }), 404
+
+@app.route('/api/debug/auth-screenshot', methods=['GET'])
+def get_auth_screenshot():
+    """Get the authentication check screenshot if available"""
+    screenshot_path = '/tmp/dreamina_auth_check.png'
+    if os.path.exists(screenshot_path):
+        return send_file(screenshot_path, mimetype='image/png')
+    return jsonify({
+        'status': 'error',
+        'message': 'Authentication screenshot not found. Call /api/health first to generate it.'
     }), 404
 
 @app.route('/api/debug/html', methods=['GET'])

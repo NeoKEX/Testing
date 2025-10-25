@@ -56,6 +56,19 @@ class DreaminaService:
             if 'name' not in cookie or 'value' not in cookie:
                 raise ValueError("Invalid cookie format: each cookie must have 'name' and 'value' fields")
         
+        # Check for expired cookies (warning only, not blocking)
+        current_time = time.time()
+        expired_cookies = []
+        for cookie in cookies:
+            if 'expirationDate' in cookie:
+                exp_date = cookie['expirationDate']
+                if exp_date < current_time:
+                    expired_cookies.append(cookie['name'])
+        
+        if expired_cookies:
+            print(f"WARNING: The following cookies have expired: {', '.join(expired_cookies)}")
+            print("You may need to update your account.json with fresh cookies from Dreamina.")
+        
         return cookies
     
     def init_driver(self):
@@ -183,12 +196,35 @@ class DreaminaService:
             driver.get(f"{self.base_url}/ai-tool/generate")
             time.sleep(5)
             
+            # Save debug screenshot for authentication check
+            try:
+                screenshot_path = '/tmp/dreamina_auth_check.png'
+                driver.save_screenshot(screenshot_path)
+                print(f"Authentication check screenshot saved to: {screenshot_path}")
+            except Exception as screenshot_err:
+                print(f"Could not save auth check screenshot: {screenshot_err}")
+            
             page_source = driver.page_source.lower()
-            if 'sign in' in page_source or 'log in' in page_source or 'login' in page_source:
+            page_title = driver.title.lower()
+            current_url = driver.current_url
+            
+            # Check for login-related keywords
+            login_keywords = ['sign in', 'log in', 'login', 'continue with google', 'continue with tiktok', 'continue with facebook']
+            found_keywords = [kw for kw in login_keywords if kw in page_source or kw in page_title]
+            
+            if found_keywords:
+                print(f"Authentication FAILED - Found login keywords: {found_keywords}")
+                print(f"Current URL: {current_url}")
+                print(f"Page title: {driver.title}")
+                print("This usually means your cookies in account.json have expired.")
+                print("Please update account.json with fresh cookies from https://dreamina.capcut.com")
                 return False
+            
+            print(f"Authentication check PASSED")
+            print(f"Current URL: {current_url}")
             return True
         except Exception as e:
-            print(f"Authentication check failed: {str(e)}")
+            print(f"Authentication check failed with error: {str(e)}")
             return False
     
     def _retry_on_stale(self, func, max_retries=3):
