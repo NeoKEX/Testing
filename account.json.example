@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "cookie_name_1",
+      "value": "cookie_value_1",
+      "domain": ".capcut.com"
+    },
+    {
+      "name": "cookie_name_2",
+      "value": "cookie_value_2",
+      "domain": ".capcut.com"
+    }
+  ],
+  "notes": "To extract cookies: 1. Login to https://dreamina.capcut.com 2. Open browser DevTools (F12) 3. Go to Application/Storage tab 4. Copy all cookies from .capcut.com domain 5. Paste them here in the format shown above"
+}
