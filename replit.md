@@ -18,12 +18,30 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 
 ## Recent Changes (October 25, 2025)
 
-### Latest Optimizations (Just Now)
+### v1.1.0 - Enhanced Debugging for Fly.io (Just Now)
+- **🔍 NEW: Debug Endpoints** - Added `/api/debug/screenshot` and `/api/debug/html` endpoints
+  - Automatically saves screenshot when button detection fails
+  - Saves full page HTML for DOM inspection
+  - Helps diagnose Fly.io deployment issues remotely
+- **🎯 Updated Button Selectors** - Removed outdated "See results" button, updated for current Dreamina UI
+  - Now uses case-insensitive "Generate" button detection
+  - Added scroll-into-view before clicking
+  - Enhanced button logging with text, class, type, and visibility
+  - Increased button detection from 10 to 15 buttons in debug output
+- **📚 Comprehensive Documentation** - Created `DEBUGGING_FLYIO.md` guide
+  - Step-by-step troubleshooting for Fly.io deployments
+  - How to use debug endpoints
+  - Cookie refresh instructions
+  - Performance optimization tips
+- **✅ Confirmed Model Support** - Verified Image 4.0 is available (per user screenshot)
+  - All 7 Dreamina models documented in API response
+  - Updated API home endpoint to show supported models
+
+### Earlier Optimizations
 - **⚡ 40% FASTER generation** - Optimized all wait times and polling intervals
   - Reduced initial wait: 5s → 3s
   - Faster polling: 4s intervals → 2s intervals
   - Reduced max timeout: 45s → 35s
-  - Optimized button selectors to prioritize "See results" first
   - Streamlined element detection with fewer retry attempts
 - **🚀 Fly.io deployment fixes** - Resolved Chrome timeout errors
   - Increased VM memory: 512MB → 2GB (required for Chrome)
@@ -63,14 +81,16 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 ## Project Architecture
 
 ### Core Files
-- `app.py` - Flask application with API endpoints
-- `dreamina_service.py` - Selenium automation for Dreamina interaction
+- `app.py` - Flask application with API endpoints (updated v1.1.0)
+- `dreamina_service.py` - Selenium automation for Dreamina interaction (updated v1.1.0)
 - `account.json.example` - Template for user cookie configuration
 - `requirements.txt` - Python dependencies
 - `Dockerfile` - Docker image for deployment with Chrome/ChromeDriver
 - `.dockerignore` - Docker build exclusions
 - `fly.toml` - Fly.io deployment configuration
 - `FLY_DEPLOYMENT.md` - Complete Fly.io deployment guide
+- `DEBUGGING_FLYIO.md` - **NEW** Comprehensive debugging guide for Fly.io deployments
+- `README.md` - Updated with v1.1.0 troubleshooting instructions
 
 ### API Endpoints
 1. `GET /` - API information and health
@@ -78,6 +98,8 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 3. `GET /api/generate/image?prompt=...` - Image generation with default model (Image 4.0)
 4. `GET /api/generate/image-4.0?prompt=...` - Image generation with Image 4.0 model
 5. `GET /api/generate/nano-banana?prompt=...` - Image generation with Nano Banana model
+6. `GET /api/debug/screenshot` - **NEW** Get debug screenshot (PNG) when generation fails
+7. `GET /api/debug/html` - **NEW** Get debug HTML for DOM inspection
 
 ### Dependencies
 - Flask 3.1.2 (web framework)
