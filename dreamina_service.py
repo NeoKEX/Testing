@@ -28,10 +28,12 @@ class DreaminaService:
                 data = json.load(f)
         # If file doesn't exist, try environment variables (for Fly.io deployment)
         elif os.environ.get('ACCOUNT_JSON'):
-            data = json.loads(os.environ.get('ACCOUNT_JSON'))
+            account_json = os.environ.get('ACCOUNT_JSON', '')
+            data = json.loads(account_json)
         elif os.environ.get('ACCOUNT_JSON_BASE64'):
             import base64
-            decoded = base64.b64decode(os.environ.get('ACCOUNT_JSON_BASE64')).decode('utf-8')
+            account_json_b64 = os.environ.get('ACCOUNT_JSON_BASE64', '')
+            decoded = base64.b64decode(account_json_b64).decode('utf-8')
             data = json.loads(decoded)
         else:
             raise FileNotFoundError(
@@ -128,8 +130,9 @@ class DreaminaService:
         chromedriver_path = None
         
         # 1. Check environment variable (Docker/Render)
-        if os.environ.get('CHROMEDRIVER_PATH') and os.path.exists(os.environ.get('CHROMEDRIVER_PATH')):
-            chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
+        env_chromedriver = os.environ.get('CHROMEDRIVER_PATH')
+        if env_chromedriver and os.path.exists(env_chromedriver):
+            chromedriver_path = env_chromedriver
             print(f"Using ChromeDriver from environment: {chromedriver_path}")
         # 2. Check Nix store (Replit)
         else:
@@ -276,7 +279,8 @@ class DreaminaService:
                     for btn in all_buttons[:10]:  # Limit to first 10
                         try:
                             text = btn.text[:50] if btn.text else "No text"
-                            classes = btn.get_attribute('class')[:50] if btn.get_attribute('class') else "No class"
+                            btn_class = btn.get_attribute('class')
+                            classes = btn_class[:50] if btn_class else "No class"
                             button_info.append(f"Button: '{text}' | Class: '{classes}'")
                         except:
                             continue
