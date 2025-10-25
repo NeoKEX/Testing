@@ -60,10 +60,9 @@ class DreaminaService:
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
-        # Safe memory optimization flags (removed unsafe flags that break functionality)
+        # Safe memory optimization flags
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-plugins')
-        chrome_options.add_argument('--blink-settings=imagesEnabled=false')  # Don't load images (we only need URLs)
         chrome_options.add_argument('--disable-background-networking')
         chrome_options.add_argument('--disable-background-timer-throttling')
         chrome_options.add_argument('--disable-backgrounding-occluded-windows')
@@ -76,12 +75,17 @@ class DreaminaService:
         chrome_options.add_argument('--mute-audio')
         chrome_options.add_argument('--no-first-run')
         chrome_options.add_argument('--safebrowsing-disable-auto-update')
-        chrome_options.add_argument('--disable-logging')
         chrome_options.add_argument('--disable-default-apps')
         chrome_options.add_argument('--disable-hang-monitor')
         chrome_options.add_argument('--disable-prompt-on-repost')
         chrome_options.add_argument('--disable-domain-reliability')
         chrome_options.add_argument('--disable-client-side-phishing-detection')
+        
+        # Set preferences to block actual image loading while keeping img elements in DOM
+        prefs = {
+            "profile.managed_default_content_settings.images": 2  # Block images from loading
+        }
+        chrome_options.add_experimental_option("prefs", prefs)
         
         # Try to find Chrome/Chromium binary in multiple locations
         chrome_found = False
@@ -353,35 +357,48 @@ class DreaminaService:
             
             # Wait for image generation with incremental checks
             print("Waiting for image generation...")
-            max_wait_time = 30
-            wait_interval = 3
+            max_wait_time = 45  # Increased timeout
+            wait_interval = 4  # Check every 4 seconds
             total_waited = 0
             new_images_found = False
             
+            # Initial longer wait for generation to start
+            time.sleep(5)
+            total_waited += 5
+            
             while total_waited < max_wait_time and not new_images_found:
-                time.sleep(wait_interval)
-                total_waited += wait_interval
-                
                 # Check if new images have appeared
                 try:
                     current_images = driver.find_elements(By.TAG_NAME, "img")
+                    all_image_urls = []
                     current_count = 0
+                    
                     for img in current_images:
                         try:
                             src = img.get_attribute('src')
                             if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
+                                all_image_urls.append(src)
                                 if src not in existing_image_urls:
                                     current_count += 1
                         except:
                             continue
                     
+                    print(f"Check at {total_waited}s: Found {len(all_image_urls)} total images, {current_count} new images")
+                    
                     if current_count >= 4:
                         new_images_found = True
-                        print(f"Found {current_count} new images after {total_waited} seconds")
+                        print(f"✓ Found {current_count} new images after {total_waited} seconds")
+                        break
                     elif total_waited < max_wait_time:
-                        print(f"Waiting... ({total_waited}s, found {current_count} new images so far)")
+                        print(f"Waiting for more images... ({total_waited}s)")
+                        time.sleep(wait_interval)
+                        total_waited += wait_interval
+                    else:
+                        break
                 except Exception as e:
                     print(f"Check failed: {str(e)}")
+                    time.sleep(wait_interval)
+                    total_waited += wait_interval
             
             # Extract only NEW generated images
             for attempt in range(max_retries):
