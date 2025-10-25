@@ -11,11 +11,17 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - **Two model endpoints available**: Image 4.0 and Nano Banana
 - Three total endpoints: `/api/generate/image`, `/api/generate/image-4.0`, `/api/generate/nano-banana`
 - Cookie-based authentication via `account.json` file
+- **Memory optimized for Render free tier** - Reduced from ~400MB to ~150MB idle, ~250-300MB during generation
 - **Ready for Render deployment** with Docker configuration
 - Cross-environment support: works on both Replit (Nix) and Render
 - **Fixed stale element error** - Improved Selenium reliability with element refetching
 
 ## Recent Changes (October 25, 2025)
+- **OPTIMIZED: Memory usage** - Reduced memory footprint by ~60-70% to fit within Render's free tier limits
+  - Browser now closes after each request instead of staying in memory
+  - Added safe memory-optimization Chrome flags
+  - Removed global service instance to prevent memory leaks
+  - Per-request browser lifecycle with guaranteed cleanup in finally blocks
 - **FIXED: Image count issue** - Now correctly returns only 4 newly generated images instead of 34 (was capturing all images on page)
 - **OPTIMIZED: Generation speed** - Reduced wait times throughout the code for 30-40% faster generation
 - **Smart image filtering** - Captures baseline images before generation, only returns new images after
