@@ -21,4 +21,5 @@ attached_assets
 replit.nix
 uv.lock
 pyproject.toml
-vercel.json
+account.json
+fly.toml

@@ -10,14 +10,14 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - Flask API server running on port 8080 in production mode
 - **Two model endpoints available**: Image 4.0 and Nano Banana
 - Three total endpoints: `/api/generate/image`, `/api/generate/image-4.0`, `/api/generate/nano-banana`
-- Cookie-based authentication via `account.json` file
-- **Memory optimized for Render free tier** - Reduced from ~400MB to ~150MB idle, ~250-300MB during generation
-- **Ready for Render deployment** with Docker configuration
-- Cross-environment support: works on both Replit (Nix) and Render
+- Cookie-based authentication via `account.json` file or environment variables
+- **Memory optimized for cloud deployment** - Reduced from ~400MB to ~150MB idle, ~250-300MB during generation
+- **Ready for Fly.io deployment** with Docker configuration
+- Cross-environment support: works on Replit (Nix), Fly.io, and other Docker platforms
 - **Fixed stale element error** - Improved Selenium reliability with element refetching
 
 ## Recent Changes (October 25, 2025)
-- **OPTIMIZED: Memory usage** - Reduced memory footprint by ~60-70% to fit within Render's free tier limits
+- **OPTIMIZED: Memory usage** - Reduced memory footprint by ~60-70% to fit within cloud free tier limits
   - Browser now closes after each request instead of staying in memory
   - Added safe memory-optimization Chrome flags
   - Removed global service instance to prevent memory leaks
@@ -33,9 +33,9 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - **Fixed Selenium stale element reference error** - Elements now refetched inside retry functions
 - **Removed unnecessary model endpoints** - Kept only Image 4.0 and Nano Banana models
 - **Removed mock mode** - API runs in production mode by default
-- **Updated Chrome detection** - Service supports both Replit (Nix) and Render environments
-- **Enhanced render.yaml** - Configured for Render deployment with Docker
-- **Ready for deployment** - All Render configuration files verified and tested
+- **Updated Chrome detection** - Service supports both Replit (Nix) and Docker environments
+- **Enhanced Fly.io configuration** - Configured for Fly.io deployment with Docker
+- **Ready for deployment** - All Fly.io configuration files verified and tested
 - Created Flask API server with CORS support
 - Implemented Selenium-based Dreamina service with cookie authentication
 - Added cookie validation and WebDriver lifecycle management
@@ -48,10 +48,10 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - `dreamina_service.py` - Selenium automation for Dreamina interaction
 - `account.json.example` - Template for user cookie configuration
 - `requirements.txt` - Python dependencies
-- `Dockerfile` - Docker image for Render deployment with Chrome/ChromeDriver
+- `Dockerfile` - Docker image for deployment with Chrome/ChromeDriver
 - `.dockerignore` - Docker build exclusions
-- `render.yaml` - Render deployment configuration (uses Docker)
-- `vercel.json` - Vercel deployment configuration (legacy)
+- `fly.toml` - Fly.io deployment configuration
+- `FLY_DEPLOYMENT.md` - Complete Fly.io deployment guide
 
 ### API Endpoints
 1. `GET /` - API information and health
@@ -71,8 +71,8 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 ## User Preferences
 - Backend-only API (no frontend required)
 - GET methods for all endpoints
-- Deployment target: Vercel or Render free tier
-- Cookie-based authentication via JSON file
+- Deployment target: Fly.io
+- Cookie-based authentication via JSON file or environment variables
 
 ## Known Limitations
 - Browser automation doesn't honor aspect_ratio, quality, or model parameters yet
@@ -81,63 +81,51 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - Cookie sessions may expire and require renewal
 - Only two models supported: Image 4.0 and Nano Banana
 
-## Render Deployment Guide
+## Fly.io Deployment Guide
+
+### Quick Start
+See `FLY_DEPLOYMENT.md` for complete deployment instructions.
 
 ### Prerequisites
-1. Active Render account (https://render.com)
-2. Valid Dreamina cookies in `account.json` format
-3. Git repository with this code
+1. Active Fly.io account (https://fly.io)
+2. Fly CLI installed (`curl -L https://fly.io/install.sh | sh`)
+3. Valid Dreamina cookies in `account.json` format
 
 ### Deployment Steps
-1. **Push code to GitHub/GitLab**
-   - Ensure all files are committed
-   - Push to your repository
+```bash
+# 1. Login to Fly.io
+fly auth login
 
-2. **Create New Web Service on Render**
-   - Go to Render Dashboard
-   - Click "New +" → "Web Service"
-   - Connect your repository
-   - Render will auto-detect `render.yaml`
+# 2. Create app
+fly apps create dreamina-api
 
-3. **Add Secret File (CRITICAL)**
-   - Go to your service settings
-   - Navigate to "Secret Files" section
-   - Click "Add Secret File"
-   - Filename: `account.json`
-   - Contents: Your Dreamina cookies JSON (from account.json)
-   - Click "Save"
+# 3. Set cookies as secret
+fly secrets set ACCOUNT_JSON='[{"name":"cookie_name","value":"cookie_value","domain":".dreamina.capcut.com"}]'
 
-4. **Environment Variables** (Optional - already set in render.yaml)
-   - PORT: 8080 (auto-configured)
-   - FLASK_ENV: production (auto-configured)
+# 4. Deploy
+fly deploy
 
-5. **Deploy**
-   - Click "Create Web Service"
-   - Render will build the Docker image (takes 5-10 minutes first time)
-   - Wait for deployment to complete
-
-6. **Test Your API**
-   - Your API will be available at: `https://your-service-name.onrender.com`
-   - Test health endpoint: `https://your-service-name.onrender.com/api/health`
-   - Test image generation: `https://your-service-name.onrender.com/api/generate/image-4.0?prompt=test`
+# 5. Test
+fly open
+```
 
 ### Deployment Configuration
 - **Docker**: Automatically installs Chrome + ChromeDriver
-- **Port**: 8080 (configured in Dockerfile and render.yaml)
-- **Free Tier**: 512MB RAM (sufficient for basic usage)
-- **Auto-deploy**: Enabled on git push
+- **Port**: 8080 (configured in Dockerfile and fly.toml)
+- **Free Tier**: 3 shared-cpu-1x 256MB VMs (auto-scaling enabled)
+- **Auto-deploy**: Run `fly deploy` to update
 
-### Troubleshooting Deployment
-- **Build fails**: Check Docker build logs for missing dependencies
-- **Authentication fails**: Verify account.json is added as secret file
-- **Service crashes**: Check logs for ChromeDriver/Chrome version mismatch
-- **Slow performance**: Free tier has limited resources, consider upgrading
+### Key Features
+- Auto-stop when idle (saves costs)
+- Auto-start on request
+- Health checks every 30s
+- HTTPS enabled by default
 
 ## Setup Instructions
 1. Extract Dreamina cookies from browser after logging in
 2. Create `account.json` with cookie data (use `account.json.example` as template)
 3. Run `python app.py` to start server on port 8080
-4. For deployment: use provided `vercel.json` or `render.yaml`
+4. For deployment: use Fly.io (see `FLY_DEPLOYMENT.md`)
 
 ## Security Notes
 - `account.json` is gitignored (contains sensitive cookies)

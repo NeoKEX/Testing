@@ -7,11 +7,12 @@ A Flask-based REST API server that wraps Dreamina's AI image generation capabili
 - 🎨 AI Image Generation via two Dreamina models:
   - **Image 4.0** - High quality, detailed images
   - **Nano Banana** - Fast, lightweight model
-- 🔐 Cookie-based authentication
+- 🔐 Cookie-based authentication (file or environment variable)
 - 🚀 RESTful API endpoints with GET method support
-- 📦 Ready for deployment on Vercel or Render
+- 📦 Ready for deployment on Fly.io
 - 🔄 Automatic browser automation with Selenium
 - ✨ Improved stale element handling for reliability
+- 💾 Memory optimized (~150MB idle, ~250-300MB during generation)
 
 ## Prerequisites
 
@@ -142,25 +143,40 @@ curl "http://localhost:8080/api/generate/nano-banana?prompt=cute%20cat&aspect_ra
 
 ## Deployment
 
-### Render (Recommended)
+### Fly.io (Recommended)
 
-This project is configured to deploy on Render using Docker for the best compatibility with Chrome/Selenium.
+This project is configured to deploy on Fly.io using Docker for the best compatibility with Chrome/Selenium.
 
-1. Create a new Web Service on [Render](https://render.com)
-2. Connect your repository
-3. Render will automatically detect `render.yaml` and build the Docker image
-4. Add your `account.json` content as a secret file in Render dashboard:
-   - Go to your service settings
-   - Navigate to "Secret Files"
-   - Add a file named `account.json` with your cookie data
-5. Deploy!
+**Quick Start:**
+```bash
+# 1. Login to Fly.io
+fly auth login
+
+# 2. Create app
+fly apps create dreamina-api
+
+# 3. Set cookies as secret
+fly secrets set ACCOUNT_JSON='[{"name":"cookie_name","value":"cookie_value","domain":".dreamina.capcut.com"}]'
+
+# 4. Deploy
+fly deploy
+
+# 5. Test
+fly open
+```
 
 The Docker image automatically installs:
 - Google Chrome Stable
 - ChromeDriver (matching version)
 - All Python dependencies
 
-**Note:** Render's free tier has 512MB RAM - this should be sufficient for basic image generation but may struggle under heavy load.
+**Features:**
+- Auto-stop when idle (saves costs)
+- Auto-start on request
+- HTTPS enabled by default
+- Free tier: 3 shared-cpu-1x 256MB VMs
+
+📚 **See `FLY_DEPLOYMENT.md` for complete deployment instructions.**
 
 ### Local Docker Testing
 
@@ -171,14 +187,12 @@ docker build -t dreamina-api .
 docker run -p 8080:8080 -v $(pwd)/account.json:/app/account.json dreamina-api
 ```
 
-### Vercel (Not Recommended)
-
-Selenium has limitations on Vercel's serverless platform. Use Render for better compatibility.
-
 ## Environment Variables
 
 - `PORT`: Server port (default: 8080)
 - `FLASK_ENV`: Flask environment (production/development)
+- `ACCOUNT_JSON`: Cookie data as JSON string (for Fly.io deployment)
+- `ACCOUNT_JSON_BASE64`: Base64-encoded cookie data (alternative for Fly.io)
 
 ## Important Notes
 
@@ -231,8 +245,9 @@ Selenium has limitations on Vercel's serverless platform. Use Render for better 
 ├── account.json           # Your authentication cookies (create this)
 ├── account.json.example   # Template for account.json
 ├── requirements.txt       # Python dependencies
-├── vercel.json           # Vercel deployment configuration
-├── render.yaml           # Render deployment configuration
+├── Dockerfile             # Docker configuration for deployment
+├── fly.toml              # Fly.io deployment configuration
+├── FLY_DEPLOYMENT.md     # Fly.io deployment guide
 └── README.md             # This file
 ```
 

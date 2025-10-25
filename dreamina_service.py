@@ -21,25 +21,34 @@ class DreaminaService:
         self.driver = None
         
     def load_cookies(self):
+        # Try to load from file first
         cookie_file = 'account.json'
-        if not os.path.exists(cookie_file):
+        if os.path.exists(cookie_file):
+            with open(cookie_file, 'r') as f:
+                data = json.load(f)
+        # If file doesn't exist, try environment variables (for Fly.io deployment)
+        elif os.environ.get('ACCOUNT_JSON'):
+            data = json.loads(os.environ.get('ACCOUNT_JSON'))
+        elif os.environ.get('ACCOUNT_JSON_BASE64'):
+            import base64
+            decoded = base64.b64decode(os.environ.get('ACCOUNT_JSON_BASE64')).decode('utf-8')
+            data = json.loads(decoded)
+        else:
             raise FileNotFoundError(
-                f"{cookie_file} not found. Please create it using account.json.example as template"
+                f"{cookie_file} not found and ACCOUNT_JSON environment variable not set. "
+                "Please create account.json using account.json.example as template or set ACCOUNT_JSON secret."
             )
         
-        with open(cookie_file, 'r') as f:
-            data = json.load(f)
-            
-            # Handle both formats: direct array or object with 'cookies' property
-            if isinstance(data, list):
-                cookies = data
-            elif isinstance(data, dict):
-                cookies = data.get('cookies', [])
-            else:
-                raise ValueError("Invalid account.json format")
-            
+        # Handle both formats: direct array or object with 'cookies' property
+        if isinstance(data, list):
+            cookies = data
+        elif isinstance(data, dict):
+            cookies = data.get('cookies', [])
+        else:
+            raise ValueError("Invalid account.json format")
+        
         if not cookies:
-            raise ValueError("No cookies found in account.json")
+            raise ValueError("No cookies found in account data")
         
         for cookie in cookies:
             if 'name' not in cookie or 'value' not in cookie:
