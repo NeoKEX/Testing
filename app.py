@@ -34,12 +34,8 @@ def home():
         'endpoints': {
             '/api/generate/image': 'Generate AI Image with default model (GET)',
             '/api/generate/image-4.0': 'Generate with Image 4.0 model (GET)',
-            '/api/generate/image-3.0': 'Generate with Image 3.0 model (GET)',
-            '/api/generate/anime': 'Generate anime style images (GET)',
-            '/api/generate/realistic': 'Generate realistic images (GET)',
-            '/api/health': 'Health check endpoint (GET)',
-            '/api/generate/video': 'Generate AI Video (GET) - Not implemented',
-            '/api/status/<task_id>': 'Check generation status (GET) - Not implemented'
+            '/api/generate/nano-banana': 'Generate with Nano Banana model (GET)',
+            '/api/health': 'Health check endpoint (GET)'
         },
         'note': 'Running in MOCK mode in Replit - Deploy to Render for real functionality' if MOCK_MODE else 'Production mode'
     })
@@ -132,6 +128,22 @@ def generate_image_4_0():
         aspect_ratio = request.args.get('aspect_ratio', '1:1')
         quality = request.args.get('quality', 'high')
         
+        if MOCK_MODE:
+            return jsonify({
+                'status': 'success',
+                'mock_mode': True,
+                'prompt': prompt,
+                'model': 'image_4.0',
+                'aspect_ratio': aspect_ratio,
+                'quality': quality,
+                'images': [
+                    'https://example.com/mock_image_4.0_1.jpg',
+                    'https://example.com/mock_image_4.0_2.jpg'
+                ],
+                'count': 2,
+                'message': 'MOCK response - Deploy to Render for real image generation'
+            })
+        
         service = init_service()
         result = service.generate_image(
             prompt=prompt,
@@ -151,8 +163,8 @@ def generate_image_4_0():
             'message': f'Image generation failed: {str(e)}'
         }), 500
 
-@app.route('/api/generate/image-3.0', methods=['GET'])
-def generate_image_3_0():
+@app.route('/api/generate/nano-banana', methods=['GET'])
+def generate_nano_banana():
     try:
         prompt = request.args.get('prompt')
         if not prompt:
@@ -164,12 +176,28 @@ def generate_image_3_0():
         aspect_ratio = request.args.get('aspect_ratio', '1:1')
         quality = request.args.get('quality', 'high')
         
+        if MOCK_MODE:
+            return jsonify({
+                'status': 'success',
+                'mock_mode': True,
+                'prompt': prompt,
+                'model': 'nano_banana',
+                'aspect_ratio': aspect_ratio,
+                'quality': quality,
+                'images': [
+                    'https://example.com/mock_nano_banana_1.jpg',
+                    'https://example.com/mock_nano_banana_2.jpg'
+                ],
+                'count': 2,
+                'message': 'MOCK response - Deploy to Render for real image generation'
+            })
+        
         service = init_service()
         result = service.generate_image(
             prompt=prompt,
             aspect_ratio=aspect_ratio,
             quality=quality,
-            model='image_3.0'
+            model='nano_banana'
         )
         
         if result.get('status') == 'success':
@@ -182,84 +210,6 @@ def generate_image_3_0():
             'status': 'error',
             'message': f'Image generation failed: {str(e)}'
         }), 500
-
-@app.route('/api/generate/anime', methods=['GET'])
-def generate_anime():
-    try:
-        prompt = request.args.get('prompt')
-        if not prompt:
-            return jsonify({
-                'status': 'error',
-                'message': 'Missing required parameter: prompt'
-            }), 400
-        
-        aspect_ratio = request.args.get('aspect_ratio', '1:1')
-        quality = request.args.get('quality', 'high')
-        
-        service = init_service()
-        result = service.generate_image(
-            prompt=prompt,
-            aspect_ratio=aspect_ratio,
-            quality=quality,
-            model='anime'
-        )
-        
-        if result.get('status') == 'success':
-            return jsonify(result)
-        else:
-            return jsonify(result), 500
-            
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Image generation failed: {str(e)}'
-        }), 500
-
-@app.route('/api/generate/realistic', methods=['GET'])
-def generate_realistic():
-    try:
-        prompt = request.args.get('prompt')
-        if not prompt:
-            return jsonify({
-                'status': 'error',
-                'message': 'Missing required parameter: prompt'
-            }), 400
-        
-        aspect_ratio = request.args.get('aspect_ratio', '1:1')
-        quality = request.args.get('quality', 'high')
-        
-        service = init_service()
-        result = service.generate_image(
-            prompt=prompt,
-            aspect_ratio=aspect_ratio,
-            quality=quality,
-            model='realistic'
-        )
-        
-        if result.get('status') == 'success':
-            return jsonify(result)
-        else:
-            return jsonify(result), 500
-            
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Image generation failed: {str(e)}'
-        }), 500
-
-@app.route('/api/generate/video', methods=['GET'])
-def generate_video():
-    return jsonify({
-        'status': 'error',
-        'message': 'Video generation is not yet implemented'
-    }), 501
-
-@app.route('/api/status/<task_id>', methods=['GET'])
-def check_status(task_id):
-    return jsonify({
-        'status': 'error',
-        'message': 'Status check is not yet implemented'
-    }), 501
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))

@@ -4,11 +4,14 @@ A Flask-based REST API server that wraps Dreamina's AI image generation capabili
 
 ## Features
 
-- 🎨 AI Image Generation via Dreamina's Image 4.0 model
+- 🎨 AI Image Generation via two Dreamina models:
+  - **Image 4.0** - High quality, detailed images
+  - **Nano Banana** - Fast, lightweight model
 - 🔐 Cookie-based authentication
-- 🚀 RESTful API endpoints
+- 🚀 RESTful API endpoints with GET method support
 - 📦 Ready for deployment on Vercel or Render
 - 🔄 Automatic browser automation with Selenium
+- ✨ Improved stale element handling for reliability
 
 ## Prerequisites
 
@@ -79,7 +82,7 @@ Checks if the service is running and authenticated.
 }
 ```
 
-### Generate Image
+### Generate Image (Default Model)
 ```
 GET /api/generate/image?prompt=YOUR_PROMPT
 ```
@@ -113,17 +116,29 @@ curl "http://localhost:8080/api/generate/image?prompt=a%20beautiful%20sunset&asp
 }
 ```
 
-### Generate Video (Not Implemented)
-```
-GET /api/generate/video?prompt=YOUR_PROMPT
-```
-Returns HTTP 501 - Not Implemented
+### Model-Specific Endpoints
 
-### Check Status (Not Implemented)
+#### Image 4.0 Model
 ```
-GET /api/status/<task_id>
+GET /api/generate/image-4.0?prompt=YOUR_PROMPT
 ```
-Returns HTTP 501 - Not Implemented
+Generate images using the Image 4.0 model (high quality, detailed).
+
+#### Nano Banana Model
+```
+GET /api/generate/nano-banana?prompt=YOUR_PROMPT
+```
+Generate images using the Nano Banana model (fast, lightweight).
+
+**Both model-specific endpoints accept the same parameters:**
+- `prompt` (required): Text description
+- `aspect_ratio` (optional): "1:1", "16:9", "9:16", "4:3", "3:4"
+- `quality` (optional): "high", "medium", "low"
+
+**Example:**
+```bash
+curl "http://localhost:8080/api/generate/nano-banana?prompt=cute%20cat&aspect_ratio=1:1"
+```
 
 ## Deployment
 

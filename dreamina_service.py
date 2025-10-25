@@ -174,23 +174,25 @@ class DreaminaService:
             
             # Find and fill prompt input with retry logic
             max_retries = 3
+            prompt_entered = False
             for attempt in range(max_retries):
                 try:
-                    prompt_input = WebDriverWait(driver, 15).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "textarea[placeholder*='prompt' i], textarea, input[type='text']"))
-                    )
-                    time.sleep(1)
-                    
-                    # Clear and enter text with retry
+                    # Refetch element on each attempt to avoid stale element
                     def enter_prompt():
-                        prompt_input.click()
-                        prompt_input.clear()
+                        prompt_input = WebDriverWait(driver, 15).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "textarea[placeholder*='prompt' i], textarea, input[type='text']"))
+                        )
                         time.sleep(0.5)
+                        prompt_input.click()
+                        time.sleep(0.3)
+                        prompt_input.clear()
+                        time.sleep(0.3)
                         prompt_input.send_keys(prompt)
                         time.sleep(0.5)
                         return True
                     
                     self._retry_on_stale(enter_prompt)
+                    prompt_entered = True
                     break
                 except (StaleElementReferenceException, TimeoutException) as e:
                     if attempt == max_retries - 1:
@@ -200,20 +202,28 @@ class DreaminaService:
                         }
                     time.sleep(2)
             
+            if not prompt_entered:
+                return {
+                    'status': 'error',
+                    'message': 'Failed to enter prompt. Please check if authentication is valid.'
+                }
+            
             # Click generate button with retry logic
             time.sleep(2)
+            button_clicked = False
             for attempt in range(max_retries):
                 try:
-                    generate_button = WebDriverWait(driver, 15).until(
-                        EC.element_to_be_clickable((By.XPATH, "//button[contains(translate(text(), 'GENERATE', 'generate'), 'generate') or contains(translate(text(), 'CREATE', 'create'), 'create')]"))
-                    )
-                    time.sleep(1)
-                    
+                    # Refetch element on each attempt to avoid stale element
                     def click_button():
+                        generate_button = WebDriverWait(driver, 15).until(
+                            EC.element_to_be_clickable((By.XPATH, "//button[contains(translate(text(), 'GENERATE', 'generate'), 'generate') or contains(translate(text(), 'CREATE', 'create'), 'create')]"))
+                        )
+                        time.sleep(0.5)
                         generate_button.click()
                         return True
                     
                     self._retry_on_stale(click_button)
+                    button_clicked = True
                     break
                 except (StaleElementReferenceException, TimeoutException) as e:
                     if attempt == max_retries - 1:
@@ -222,6 +232,12 @@ class DreaminaService:
                             'message': f'Failed to click generate button after {max_retries} attempts: {str(e)}'
                         }
                     time.sleep(2)
+            
+            if not button_clicked:
+                return {
+                    'status': 'error',
+                    'message': 'Failed to click generate button. Please try again.'
+                }
             
             # Wait for image generation
             print("Waiting for image generation...")
