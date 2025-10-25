@@ -109,9 +109,13 @@ View all regions: `fly platform regions`
 
 ### Scaling
 
-#### Adjust Memory (if needed)
+#### Memory Requirements
+**IMPORTANT**: Chrome requires at least 2GB of memory to run reliably. The `fly.toml` is pre-configured with 2GB.
+
+If you need to adjust:
 ```bash
-fly scale memory 1024  # Increase to 1GB
+fly scale memory 2048  # 2GB (recommended)
+fly scale memory 1024  # 1GB (minimum, may be unstable)
 ```
 
 #### Keep App Running (Disable auto-stop)

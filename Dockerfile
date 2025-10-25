@@ -38,7 +38,9 @@ ENV PORT=8080
 ENV FLASK_ENV=production
 ENV CHROME_BIN=/usr/bin/google-chrome
 ENV CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+ENV WDM_LOCAL=1
+ENV WDM_LOG_LEVEL=0
 
 EXPOSE 8080
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "2", "--timeout", "180", "--preload", "app:app"]

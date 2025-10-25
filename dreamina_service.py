@@ -164,7 +164,7 @@ class DreaminaService:
     def apply_cookies(self):
         driver = self.init_driver()
         driver.get(self.base_url)
-        time.sleep(1)
+        time.sleep(0.5)
         
         for cookie in self.cookies:
             try:
@@ -173,7 +173,7 @@ class DreaminaService:
                 print(f"Warning: Failed to add cookie {cookie.get('name')}: {str(e)}")
         
         driver.refresh()
-        time.sleep(2)
+        time.sleep(1)
     
     def check_authentication(self):
         try:
@@ -206,60 +206,34 @@ class DreaminaService:
             driver = self.init_driver()
             self.apply_cookies()
             
-            # Navigate to home page first
+            # Navigate to home page
             driver.get(self.home_url)
-            time.sleep(3)
+            time.sleep(1.5)
             
             print(f"Navigated to: {driver.current_url}")
             print(f"Page title: {driver.title}")
             
-            # Find and fill prompt input with retry logic - try multiple selectors
-            max_retries = 3
+            # Find and fill prompt input - optimized with specific selectors first
             prompt_entered = False
-            
-            # List of input selectors to try
             input_selectors = [
-                (By.CSS_SELECTOR, "textarea[placeholder*='prompt' i]"),
-                (By.CSS_SELECTOR, "textarea[placeholder*='Prompt' i]"),
                 (By.CSS_SELECTOR, "textarea"),
-                (By.CSS_SELECTOR, "input[type='text'][placeholder*='prompt' i]"),
                 (By.CSS_SELECTOR, "input[type='text']"),
-                (By.XPATH, "//textarea[contains(@placeholder, 'prompt') or contains(@placeholder, 'Prompt')]"),
-                (By.XPATH, "//input[@type='text' and (contains(@placeholder, 'prompt') or contains(@placeholder, 'Prompt'))]"),
             ]
             
-            for attempt in range(max_retries):
-                for selector_type, selector_value in input_selectors:
-                    try:
-                        # Refetch element on each attempt to avoid stale element
-                        def enter_prompt():
-                            prompt_input = WebDriverWait(driver, 5).until(
-                                EC.presence_of_element_located((selector_type, selector_value))
-                            )
-                            time.sleep(0.3)
-                            prompt_input.click()
-                            time.sleep(0.2)
-                            prompt_input.clear()
-                            time.sleep(0.2)
-                            prompt_input.send_keys(prompt)
-                            time.sleep(0.3)
-                            return True
-                        
-                        self._retry_on_stale(enter_prompt)
-                        prompt_entered = True
-                        print(f"Successfully entered prompt using selector: {selector_value}")
-                        break
-                    except (StaleElementReferenceException, TimeoutException):
-                        continue
-                    except Exception as e:
-                        continue
-                
-                if prompt_entered:
+            for selector_type, selector_value in input_selectors:
+                try:
+                    prompt_input = WebDriverWait(driver, 8).until(
+                        EC.element_to_be_clickable((selector_type, selector_value))
+                    )
+                    prompt_input.click()
+                    time.sleep(0.1)
+                    prompt_input.clear()
+                    prompt_input.send_keys(prompt)
+                    prompt_entered = True
+                    print(f"Prompt entered using {selector_type}")
                     break
-                    
-                if attempt < max_retries - 1:
-                    print(f"Prompt input attempt {attempt + 1} failed, retrying...")
-                    time.sleep(2)
+                except (StaleElementReferenceException, TimeoutException, Exception) as e:
+                    continue
             
             if not prompt_entered:
                 return {
@@ -267,64 +241,32 @@ class DreaminaService:
                     'message': 'Failed to enter prompt. Please check if authentication is valid.'
                 }
             
-            # Click generate button with retry logic - try multiple selectors
-            time.sleep(1)
+            # Click "See results" button - optimized
+            time.sleep(0.5)
             button_clicked = False
             
-            # List of button selectors to try (in order of preference)
-            # Based on Dreamina's actual page structure
+            # Prioritized button selectors based on actual page structure
             button_selectors = [
-                # Look for "See results" or similar result/generate buttons
                 (By.XPATH, "//button[contains(., 'See results')]"),
-                (By.XPATH, "//button[contains(., 'results')]"),
+                (By.XPATH, "//button[contains(text(), 'results')]"),
                 (By.XPATH, "//button[contains(., 'Generate')]"),
-                (By.XPATH, "//button[contains(., 'generate')]"),
-                (By.XPATH, "//button[contains(translate(., 'GENERATE', 'generate'), 'generate')]"),
-                (By.XPATH, "//button[contains(translate(., 'CREATE', 'create'), 'create')]"),
-                # Try by common class patterns
                 (By.CSS_SELECTOR, "button[class*='generate']"),
                 (By.CSS_SELECTOR, "button[class*='submit']"),
-                (By.CSS_SELECTOR, "button[class*='create']"),
-                (By.CSS_SELECTOR, "button[class*='result']"),
-                # Try by type
                 (By.XPATH, "//button[@type='submit']"),
-                # Try any button with generate-related attributes
-                (By.XPATH, "//button[contains(@class, 'generate') or contains(@id, 'generate')]"),
-                # Fallback: any visible primary-looking button
-                (By.CSS_SELECTOR, "button[class*='primary']"),
             ]
             
-            for attempt in range(max_retries):
-                for selector_type, selector_value in button_selectors:
-                    try:
-                        def click_button():
-                            generate_button = WebDriverWait(driver, 5).until(
-                                EC.element_to_be_clickable((selector_type, selector_value))
-                            )
-                            time.sleep(0.3)
-                            # Try clicking with JavaScript as backup
-                            try:
-                                generate_button.click()
-                            except:
-                                driver.execute_script("arguments[0].click();", generate_button)
-                            return True
-                        
-                        self._retry_on_stale(click_button)
-                        button_clicked = True
-                        print(f"Successfully clicked button using selector: {selector_value}")
-                        break
-                    except (StaleElementReferenceException, TimeoutException):
-                        continue
-                    except Exception as e:
-                        print(f"Selector {selector_value} failed: {str(e)[:100]}")
-                        continue
-                
-                if button_clicked:
+            for selector_type, selector_value in button_selectors:
+                try:
+                    generate_button = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((selector_type, selector_value))
+                    )
+                    # Use JavaScript click for reliability
+                    driver.execute_script("arguments[0].click();", generate_button)
+                    button_clicked = True
+                    print(f"Button clicked: {selector_value}")
                     break
-                    
-                if attempt < max_retries - 1:
-                    print(f"Button click attempt {attempt + 1} failed, retrying...")
-                    time.sleep(3)
+                except (StaleElementReferenceException, TimeoutException, Exception) as e:
+                    continue
             
             if not button_clicked:
                 # Debug: Try to find all buttons and log them
@@ -348,8 +290,8 @@ class DreaminaService:
                     'message': 'Failed to click generate button after trying multiple selectors. The page structure may have changed or authentication failed.'
                 }
             
-            # Capture existing images BEFORE generation to filter them out later
-            print("Capturing existing images before generation...")
+            # Capture existing images BEFORE generation
+            print("Capturing existing images...")
             existing_image_urls = set()
             try:
                 existing_images = driver.find_elements(By.TAG_NAME, "img")
@@ -360,103 +302,74 @@ class DreaminaService:
                             existing_image_urls.add(src)
                     except:
                         continue
-                print(f"Found {len(existing_image_urls)} existing images on page")
+                print(f"Found {len(existing_image_urls)} existing images")
             except Exception as e:
                 print(f"Warning: Could not capture existing images: {str(e)}")
             
-            # Wait for image generation with incremental checks
-            print("Waiting for image generation...")
-            max_wait_time = 45  # Increased timeout
-            wait_interval = 4  # Check every 4 seconds
+            # Optimized waiting for image generation
+            print("Waiting for generation...")
+            max_wait_time = 35  # Reduced from 45s
+            wait_interval = 2   # Check every 2 seconds (reduced from 4s)
             total_waited = 0
-            new_images_found = False
             
-            # Initial longer wait for generation to start
-            time.sleep(5)
-            total_waited += 5
+            # Initial wait for generation to start
+            time.sleep(3)  # Reduced from 5s
+            total_waited += 3
             
-            while total_waited < max_wait_time and not new_images_found:
-                # Check if new images have appeared
+            new_image_urls = []
+            while total_waited < max_wait_time:
                 try:
                     current_images = driver.find_elements(By.TAG_NAME, "img")
-                    all_image_urls = []
-                    current_count = 0
+                    new_image_urls = []
                     
                     for img in current_images:
                         try:
                             src = img.get_attribute('src')
                             if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
-                                all_image_urls.append(src)
                                 if src not in existing_image_urls:
-                                    current_count += 1
+                                    new_image_urls.append(src)
                         except:
                             continue
                     
-                    print(f"Check at {total_waited}s: Found {len(all_image_urls)} total images, {current_count} new images")
+                    print(f"[{total_waited}s] New images: {len(new_image_urls)}")
                     
-                    if current_count >= 4:
-                        new_images_found = True
-                        print(f"✓ Found {current_count} new images after {total_waited} seconds")
+                    # Dreamina generates 4 images
+                    if len(new_image_urls) >= 4:
+                        print(f"✓ Generated {len(new_image_urls)} images in {total_waited}s")
                         break
-                    elif total_waited < max_wait_time:
-                        print(f"Waiting for more images... ({total_waited}s)")
-                        time.sleep(wait_interval)
-                        total_waited += wait_interval
-                    else:
-                        break
+                    
+                    # Continue waiting
+                    time.sleep(wait_interval)
+                    total_waited += wait_interval
+                    
                 except Exception as e:
-                    print(f"Check failed: {str(e)}")
+                    print(f"Check error: {str(e)}")
                     time.sleep(wait_interval)
                     total_waited += wait_interval
             
-            # Extract only NEW generated images
-            for attempt in range(max_retries):
-                try:
-                    images = driver.find_elements(By.TAG_NAME, "img")
-                    new_image_urls = []
-                    for img in images:
-                        try:
-                            src = img.get_attribute('src')
-                            if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
-                                # Only include images that weren't there before
-                                if src not in existing_image_urls and src not in new_image_urls:
-                                    new_image_urls.append(src)
-                        except StaleElementReferenceException:
-                            continue
-                    
-                    if new_image_urls:
-                        # Dreamina typically generates 4 images
-                        expected_count = 4
-                        if len(new_image_urls) < expected_count and attempt < max_retries - 1:
-                            print(f"Found only {len(new_image_urls)} images, waiting for more...")
-                            time.sleep(3)
-                            continue
-                        
-                        print(f"Successfully extracted {len(new_image_urls)} newly generated images")
-                        return {
-                            'status': 'success',
-                            'prompt': prompt,
-                            'model': model,
-                            'aspect_ratio': aspect_ratio,
-                            'quality': quality,
-                            'images': new_image_urls,
-                            'count': len(new_image_urls)
-                        }
-                    elif attempt < max_retries - 1:
-                        print(f"No new images found yet, retrying... (attempt {attempt + 1}/{max_retries})")
-                        time.sleep(3)
-                    else:
-                        return {
-                            'status': 'error',
-                            'message': 'No new generated images found. Generation may have failed or timed out.'
-                        }
-                except Exception as e:
-                    if attempt == max_retries - 1:
-                        return {
-                            'status': 'error',
-                            'message': f'Failed to retrieve generated images: {str(e)}'
-                        }
-                    time.sleep(3)
+            # Return results - require at least 4 images for success
+            if len(new_image_urls) >= 4:
+                print(f"Success: {len(new_image_urls)} images generated in {total_waited}s")
+                return {
+                    'status': 'success',
+                    'prompt': prompt,
+                    'model': model,
+                    'aspect_ratio': aspect_ratio,
+                    'quality': quality,
+                    'images': new_image_urls,
+                    'count': len(new_image_urls),
+                    'generation_time': f"{total_waited}s"
+                }
+            elif new_image_urls:
+                return {
+                    'status': 'error',
+                    'message': f'Only {len(new_image_urls)} images generated (expected 4). Generation may have been incomplete. Try again.'
+                }
+            else:
+                return {
+                    'status': 'error',
+                    'message': f'No images generated after {total_waited}s. Please check authentication.'
+                }
                 
         except Exception as e:
             return {
