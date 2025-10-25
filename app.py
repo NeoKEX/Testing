@@ -15,13 +15,24 @@ def home():
     return jsonify({
         'status': 'success',
         'message': 'Dreamina API Server is running',
-        'version': '1.0.0',
+        'version': '1.1.0',
         'endpoints': {
-            '/api/generate/image': 'Generate AI Image with default model (GET)',
-            '/api/generate/image-4.0': 'Generate with Image 4.0 model (GET)',
-            '/api/generate/nano-banana': 'Generate with Nano Banana model (GET)',
-            '/api/health': 'Health check endpoint (GET)'
-        }
+            '/api/generate/image': 'Generate AI Image with default model (GET: ?prompt=...&model=image_4.0)',
+            '/api/generate/image-4.0': 'Generate with Image 4.0 model (GET: ?prompt=...)',
+            '/api/generate/nano-banana': 'Generate with Nano Banana model (GET: ?prompt=...)',
+            '/api/health': 'Health check endpoint (GET)',
+            '/api/debug/screenshot': 'Get debug screenshot when generation fails (GET)',
+            '/api/debug/html': 'Get debug HTML when generation fails (GET)'
+        },
+        'supported_models': [
+            'image_4.0',
+            'nano_banana',
+            'image_3.1',
+            'image_3.0',
+            'image_2.1',
+            'image_2.0_pro',
+            'image_1.4'
+        ]
     })
 
 @app.route('/api/health', methods=['GET'])

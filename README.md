@@ -219,21 +219,35 @@ docker run -p 8080:8080 -v $(pwd)/account.json:/app/account.json dreamina-api
 
 ## Troubleshooting
 
+### "Failed to click generate button" on Fly.io
+
+**New in v1.1.0:** The API now provides debug endpoints to help diagnose this issue.
+
+1. **Get debug screenshot:** Visit `https://your-app.fly.dev/api/debug/screenshot` to see what the browser sees
+2. **Get debug HTML:** Visit `https://your-app.fly.dev/api/debug/html` to inspect the page DOM
+3. **Check logs:** Run `fly logs` to see detailed button detection attempts
+
+📚 **See `DEBUGGING_FLYIO.md` for complete troubleshooting guide.**
+
 ### "account.json not found"
 - Create `account.json` using `account.json.example` as template
 - Ensure cookies are properly formatted
+- For Fly.io, use `fly secrets set ACCOUNT_JSON='...'`
 
 ### "Authentication failed"
 - Cookies may have expired - extract fresh cookies from browser
 - Ensure you're logged in to Dreamina in your browser
 - Check that cookie domain is set to `.capcut.com`
+- Test with `/api/health` endpoint
 
 ### "Chrome driver not found"
 - Run `pip install webdriver-manager` to auto-download drivers
 - Or manually install ChromeDriver matching your Chrome version
+- For Docker/Fly.io, Chrome is pre-installed
 
 ### Slow generation
-- Browser automation is inherently slower than direct APIs
+- Browser automation is inherently slower than direct APIs (30-45 seconds typical)
+- Dreamina generates 4 images per request
 - Consider adding caching or queue mechanisms for production use
 
 ## Project Structure
