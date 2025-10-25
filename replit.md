@@ -7,17 +7,21 @@ Backend-only Flask REST API that wraps Dreamina's AI image generation service us
 Provides a programmatic API interface to Dreamina's image generation capabilities since Dreamina doesn't offer a public API.
 
 ## Current State
-- Flask API server running on port 8080
+- Flask API server running on port 8080 in production mode (mock mode removed)
 - Single working endpoint: `/api/generate/image` (GET)
 - Unimplemented endpoints return HTTP 501: `/api/generate/video`, `/api/status/<task_id>`
 - Cookie-based authentication via `account.json` file
-- Configured for deployment on Vercel or Render
+- Configured for deployment on Render free tier with automatic Chrome installation
+- Cross-environment support: works on both Replit (Nix) and Render
 
 ## Recent Changes (October 25, 2025)
+- **Removed mock mode** - API now runs in production mode by default
+- **Updated Chrome detection** - Service supports both Replit (Nix) and Render environments
+- **Enhanced render.yaml** - Added automatic Chrome installation for Render deployments
+- **Updated workflow** - Removed MOCK_MODE environment variable
 - Created Flask API server with CORS support
 - Implemented Selenium-based Dreamina service with cookie authentication
 - Added cookie validation and WebDriver lifecycle management
-- Created deployment configurations for Vercel and Render
 - Added comprehensive README with API documentation
 - Documented current limitations (aspect_ratio, quality, model parameters not yet implemented)
 
