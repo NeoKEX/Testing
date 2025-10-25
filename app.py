@@ -15,7 +15,7 @@ def home():
     return jsonify({
         'status': 'success',
         'message': 'Dreamina API Server is running',
-        'version': '2.1.0',
+        'version': '2.1.1',
         'endpoints': {
             '/api/generate/image': 'Generate AI Image with default model (GET: ?prompt=...&model=image_4.0)',
             '/api/generate/image-4.0': 'Generate with Image 4.0 model (GET: ?prompt=...)',

@@ -16,6 +16,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 class DreaminaService:
     def __init__(self):
         self.base_url = "https://dreamina.capcut.com"
+        self.login_url = "https://dreamina.capcut.com/ai-tool/login"
         self.home_url = "https://dreamina.capcut.com/ai-tool/home/"
         self.driver = None
         self.is_authenticated = False
@@ -158,9 +159,9 @@ class DreaminaService:
             print(f"Email: {email[:3]}...{email[-10:]}")  # Show partial email for debugging
             print("=" * 60)
             
-            # Navigate to Dreamina homepage
-            print(f"Navigating to: {self.base_url}")
-            driver.get(self.base_url)
+            # Navigate to Dreamina login page
+            print(f"Navigating to: {self.login_url}")
+            driver.get(self.login_url)
             print(f"Current URL after navigation: {driver.current_url}")
             print(f"Page title: {driver.title}")
             
@@ -173,14 +174,17 @@ class DreaminaService:
             
             time.sleep(3)
             
-            # Look for and click the "Continue with email" button
-            print("\nStep 1: Looking for 'Continue with email' button...")
+            # Look for and click the "Continue with email" or "Email" button
+            print("\nStep 1: Looking for email login option...")
             email_button_found = False
             email_button_selectors = [
+                (By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'email')]"),
+                (By.XPATH, "//*[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'continue with email')]"),
+                (By.XPATH, "//button[contains(text(), 'Email')]"),
                 (By.XPATH, "//button[contains(text(), 'Continue with email')]"),
                 (By.XPATH, "//*[contains(text(), 'Continue with email')]"),
-                (By.XPATH, "//div[contains(text(), 'Continue with email')]"),
                 (By.CSS_SELECTOR, "button[class*='email']"),
+                (By.XPATH, "//div[contains(@class, 'email')]//button"),
             ]
             
             for i, (selector_type, selector_value) in enumerate(email_button_selectors):
@@ -253,7 +257,42 @@ class DreaminaService:
             
             if not email_input_found:
                 print("  ✗ FAILED: Could not find email input field")
+                print("\n  🔍 DEBUG: Inspecting page for all input fields...")
+                
+                # Debug: List all input elements on the page
+                try:
+                    all_inputs = driver.find_elements(By.TAG_NAME, "input")
+                    print(f"  Found {len(all_inputs)} input elements total:")
+                    for idx, inp in enumerate(all_inputs[:10], 1):  # Show first 10
+                        inp_type = inp.get_attribute('type') or 'no-type'
+                        inp_placeholder = inp.get_attribute('placeholder') or 'no-placeholder'
+                        inp_name = inp.get_attribute('name') or 'no-name'
+                        is_visible = inp.is_displayed()
+                        print(f"    {idx}. Type: {inp_type}, Placeholder: {inp_placeholder}, Name: {inp_name}, Visible: {is_visible}")
+                except Exception as e:
+                    print(f"  Could not inspect inputs: {e}")
+                
+                # Debug: List all buttons
+                try:
+                    all_buttons = driver.find_elements(By.TAG_NAME, "button")
+                    print(f"\n  Found {len(all_buttons)} button elements total:")
+                    for idx, btn in enumerate(all_buttons[:10], 1):  # Show first 10
+                        btn_text = btn.text[:50] if btn.text else 'no-text'
+                        btn_type = btn.get_attribute('type') or 'no-type'
+                        is_visible = btn.is_displayed()
+                        print(f"    {idx}. Text: '{btn_text}', Type: {btn_type}, Visible: {is_visible}")
+                except Exception as e:
+                    print(f"  Could not inspect buttons: {e}")
+                
                 driver.save_screenshot('/tmp/login_error_no_email_input.png')
+                # Save HTML for debugging
+                try:
+                    with open('/tmp/login_error_no_email_input.html', 'w', encoding='utf-8') as f:
+                        f.write(driver.page_source)
+                    print("  Debug HTML saved to /tmp/login_error_no_email_input.html")
+                except:
+                    pass
+                    
                 raise Exception("Could not find email input field. Screenshot saved to /tmp/login_error_no_email_input.png")
             
             # Enter password

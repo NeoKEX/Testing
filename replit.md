@@ -18,7 +18,20 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 
 ## Recent Changes (October 25, 2025)
 
-### v2.1.0 - Startup Login (Latest)
+### v2.1.1 - Login Page Fix & Enhanced Debugging (Latest)
+- **🔧 CRITICAL FIX: Updated login URL** - Now navigates to dedicated login page
+  - Changed from `dreamina.capcut.com` to `dreamina.capcut.com/ai-tool/login`
+  - Reflects Dreamina's updated login page structure (October 2025)
+- **🔍 ENHANCED DEBUGGING** - Comprehensive page inspection when login fails
+  - Lists all input fields with type, placeholder, name, and visibility
+  - Lists all buttons with text, type, and visibility status
+  - Saves both screenshot and HTML for remote debugging on Fly.io
+  - Helps diagnose login issues without local access
+- **✨ IMPROVED SELECTORS** - More robust email/password field detection
+  - Case-insensitive button matching
+  - Multiple fallback selectors for better compatibility
+
+### v2.1.0 - Startup Login
 - **🚀 NEW: Automatic Login on Server Startup** - Server now performs authentication when it starts
   - Login process executes before Flask accepts any requests
   - Clear success/failure logging with visual indicators (✅/❌)
