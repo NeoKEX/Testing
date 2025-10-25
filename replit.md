@@ -18,7 +18,17 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 
 ## Recent Changes (October 25, 2025)
 
-### v1.1.0 - Enhanced Debugging for Fly.io (Just Now)
+### v1.1.1 - Critical Fix: Image Loading (Just Now)
+- **🔧 CRITICAL FIX: Removed image blocking** - Chrome was blocking image loading which prevented generated image URLs from appearing
+  - Removed `profile.managed_default_content_settings.images: 2` setting
+  - This was causing "No images generated" errors even when generation succeeded
+  - Images now load properly and URLs are detected
+- **🔍 Enhanced image detection debugging** - Now saves screenshot and HTML when image detection fails
+  - Shows total images, existing images, and new images detected
+  - Logs first 3 image URLs for debugging
+  - Better error messages explaining possible causes
+
+### v1.1.0 - Enhanced Debugging for Fly.io
 - **🔍 NEW: Debug Endpoints** - Added `/api/debug/screenshot` and `/api/debug/html` endpoints
   - Automatically saves screenshot when button detection fails
   - Saves full page HTML for DOM inspection
