@@ -8,21 +8,13 @@ from dreamina_service import DreaminaService
 app = Flask(__name__)
 CORS(app)
 
-dreamina_service = None
 MOCK_MODE = os.environ.get('MOCK_MODE', 'false').lower() == 'true'
 
 def init_service():
-    global dreamina_service
-    if dreamina_service is None and not MOCK_MODE:
-        dreamina_service = DreaminaService()
-    return dreamina_service
-
-def cleanup_service():
-    global dreamina_service
-    if dreamina_service is not None:
-        dreamina_service.close()
-
-atexit.register(cleanup_service)
+    """Create a new service instance for each request to minimize memory usage"""
+    if not MOCK_MODE:
+        return DreaminaService()
+    return None
 
 @app.route('/', methods=['GET'])
 def home():
@@ -42,6 +34,7 @@ def home():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    service = None
     try:
         if MOCK_MODE:
             return jsonify({
@@ -65,9 +58,13 @@ def health_check():
             'authenticated': False,
             'message': str(e)
         }), 500
+    finally:
+        if service:
+            service.close()
 
 @app.route('/api/generate/image', methods=['GET'])
 def generate_image():
+    service = None
     try:
         prompt = request.args.get('prompt')
         if not prompt:
@@ -114,9 +111,13 @@ def generate_image():
             'status': 'error',
             'message': f'Image generation failed: {str(e)}'
         }), 500
+    finally:
+        if service:
+            service.close()
 
 @app.route('/api/generate/image-4.0', methods=['GET'])
 def generate_image_4_0():
+    service = None
     try:
         prompt = request.args.get('prompt')
         if not prompt:
@@ -162,9 +163,13 @@ def generate_image_4_0():
             'status': 'error',
             'message': f'Image generation failed: {str(e)}'
         }), 500
+    finally:
+        if service:
+            service.close()
 
 @app.route('/api/generate/nano-banana', methods=['GET'])
 def generate_nano_banana():
+    service = None
     try:
         prompt = request.args.get('prompt')
         if not prompt:
@@ -210,6 +215,9 @@ def generate_nano_banana():
             'status': 'error',
             'message': f'Image generation failed: {str(e)}'
         }), 500
+    finally:
+        if service:
+            service.close()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
