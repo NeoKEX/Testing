@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
 from dreamina_service import DreaminaService
@@ -44,6 +44,28 @@ def health_check():
     finally:
         if service:
             service.close()
+
+@app.route('/api/debug/screenshot', methods=['GET'])
+def get_debug_screenshot():
+    """Get the debug screenshot if available"""
+    screenshot_path = '/tmp/dreamina_debug.png'
+    if os.path.exists(screenshot_path):
+        return send_file(screenshot_path, mimetype='image/png')
+    return jsonify({
+        'status': 'error',
+        'message': 'Debug screenshot not found. Generate an image first to create debug files.'
+    }), 404
+
+@app.route('/api/debug/html', methods=['GET'])
+def get_debug_html():
+    """Get the debug HTML if available"""
+    html_path = '/tmp/dreamina_debug.html'
+    if os.path.exists(html_path):
+        return send_file(html_path, mimetype='text/html')
+    return jsonify({
+        'status': 'error',
+        'message': 'Debug HTML not found. Generate an image first to create debug files.'
+    }), 404
 
 @app.route('/api/generate/image', methods=['GET'])
 def generate_image():

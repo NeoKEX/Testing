@@ -211,10 +211,32 @@ class DreaminaService:
             
             # Navigate to home page
             driver.get(self.home_url)
-            time.sleep(1.5)
+            time.sleep(2)
             
             print(f"Navigated to: {driver.current_url}")
             print(f"Page title: {driver.title}")
+            
+            # Ensure we're on the AI Image section
+            try:
+                # Try to click "AI Image" button if visible (to ensure correct section is active)
+                ai_image_selectors = [
+                    (By.XPATH, "//button[contains(text(), 'AI Image')]"),
+                    (By.XPATH, "//*[contains(text(), 'AI Image')]"),
+                ]
+                for selector_type, selector_value in ai_image_selectors:
+                    try:
+                        ai_image_btn = WebDriverWait(driver, 3).until(
+                            EC.element_to_be_clickable((selector_type, selector_value))
+                        )
+                        driver.execute_script("arguments[0].click();", ai_image_btn)
+                        print("Clicked 'AI Image' section")
+                        time.sleep(0.5)
+                        break
+                    except:
+                        continue
+            except Exception as e:
+                # Not critical if this fails - the page might already be on the right section
+                print(f"Note: Could not click AI Image section (might already be active): {str(e)}")
             
             # Find and fill prompt input - optimized with specific selectors first
             prompt_entered = False
@@ -244,54 +266,78 @@ class DreaminaService:
                     'message': 'Failed to enter prompt. Please check if authentication is valid.'
                 }
             
-            # Click "See results" button - optimized
-            time.sleep(0.5)
+            # Wait for Generate button to become active after entering prompt
+            # The button may need time to enable after prompt is entered
+            print("Waiting for Generate button to become available...")
+            time.sleep(1.5)  # Give page time to fully load and enable button after entering prompt
             button_clicked = False
             
-            # Prioritized button selectors based on actual page structure
+            # Updated button selectors for current Dreamina page (October 2025)
             button_selectors = [
-                (By.XPATH, "//button[contains(., 'See results')]"),
-                (By.XPATH, "//button[contains(text(), 'results')]"),
-                (By.XPATH, "//button[contains(., 'Generate')]"),
+                # Try standard Generate button first
+                (By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'generate')]"),
                 (By.CSS_SELECTOR, "button[class*='generate']"),
-                (By.CSS_SELECTOR, "button[class*='submit']"),
+                (By.CSS_SELECTOR, "button[class*='Generate']"),
+                # Try blue primary button (common pattern for Generate CTA)
                 (By.XPATH, "//button[@type='submit']"),
+                (By.XPATH, "//button[contains(@class, 'primary')]"),
+                (By.XPATH, "//button[contains(@class, 'btn-primary')]"),
+                # Fallback to any clickable button in workspace area
+                (By.CSS_SELECTOR, "button[class*='submit']"),
             ]
             
             for selector_type, selector_value in button_selectors:
                 try:
-                    generate_button = WebDriverWait(driver, 5).until(
+                    generate_button = WebDriverWait(driver, 8).until(
                         EC.element_to_be_clickable((selector_type, selector_value))
                     )
+                    # Scroll button into view first
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", generate_button)
+                    time.sleep(0.3)
                     # Use JavaScript click for reliability
                     driver.execute_script("arguments[0].click();", generate_button)
                     button_clicked = True
-                    print(f"Button clicked: {selector_value}")
+                    print(f"✓ Button clicked using selector: {selector_value}")
                     break
                 except (StaleElementReferenceException, TimeoutException, Exception) as e:
                     continue
             
             if not button_clicked:
-                # Debug: Try to find all buttons and log them
+                # Enhanced debug: Save screenshot and button info
                 try:
+                    # Take screenshot for debugging
+                    screenshot_path = '/tmp/dreamina_debug.png'
+                    driver.save_screenshot(screenshot_path)
+                    print(f"Debug screenshot saved to: {screenshot_path}")
+                    
+                    # Save page HTML for analysis
+                    html_path = '/tmp/dreamina_debug.html'
+                    with open(html_path, 'w', encoding='utf-8') as f:
+                        f.write(driver.page_source)
+                    print(f"Debug HTML saved to: {html_path}")
+                    
+                    # Find all buttons and log them
                     all_buttons = driver.find_elements(By.TAG_NAME, "button")
                     button_info = []
-                    for btn in all_buttons[:10]:  # Limit to first 10
+                    for i, btn in enumerate(all_buttons[:15]):  # Increased limit to 15
                         try:
-                            text = btn.text[:50] if btn.text else "No text"
+                            text = btn.text[:80] if btn.text else "No text"
                             btn_class = btn.get_attribute('class')
-                            classes = btn_class[:50] if btn_class else "No class"
-                            button_info.append(f"Button: '{text}' | Class: '{classes}'")
-                        except:
-                            continue
-                    debug_msg = " | ".join(button_info) if button_info else "No buttons found"
-                    print(f"Available buttons: {debug_msg}")
-                except:
-                    pass
+                            classes = btn_class[:80] if btn_class else "No class"
+                            btn_type = btn.get_attribute('type') or "no type"
+                            visible = btn.is_displayed()
+                            button_info.append(f"[{i}] Text:'{text}' | Class:'{classes}' | Type:'{btn_type}' | Visible:{visible}")
+                        except Exception as btn_err:
+                            button_info.append(f"[{i}] Error reading button: {str(btn_err)}")
+                    
+                    debug_msg = "\n".join(button_info) if button_info else "No buttons found"
+                    print(f"Available buttons ({len(all_buttons)} total):\n{debug_msg}")
+                except Exception as debug_err:
+                    print(f"Debug error: {str(debug_err)}")
                 
                 return {
                     'status': 'error',
-                    'message': 'Failed to click generate button after trying multiple selectors. The page structure may have changed or authentication failed.'
+                    'message': 'Failed to click generate button. Debug files saved to /tmp/dreamina_debug.png and /tmp/dreamina_debug.html. Check logs for button details.'
                 }
             
             # Capture existing images BEFORE generation
