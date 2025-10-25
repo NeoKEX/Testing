@@ -22,6 +22,11 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - **🔧 CRITICAL FIX: Updated login URL** - Now navigates to dedicated login page
   - Changed from `dreamina.capcut.com` to `dreamina.capcut.com/ai-tool/login`
   - Reflects Dreamina's updated login page structure (October 2025)
+- **🆕 NEW ENDPOINT: `/login`** - Dedicated login check endpoint
+  - GET method for testing login functionality
+  - Returns detailed authentication status with timestamps
+  - Clear success/failure messages with debugging info
+  - Links to debug screenshots when login fails
 - **🔍 ENHANCED DEBUGGING** - Comprehensive page inspection when login fails
   - Lists all input fields with type, placeholder, name, and visibility
   - Lists all buttons with text, type, and visibility status
@@ -125,13 +130,15 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 
 ### API Endpoints
 1. `GET /` - API information and health
-2. `GET /api/health` - Authentication status check
-3. `GET /api/generate/image?prompt=...` - Image generation with default model (Image 4.0)
-4. `GET /api/generate/image-4.0?prompt=...` - Image generation with Image 4.0 model
-5. `GET /api/generate/nano-banana?prompt=...` - Image generation with Nano Banana model
-6. `GET /api/debug/screenshot` - Get debug screenshot (PNG) when generation fails
-7. `GET /api/debug/auth-screenshot` - Get debug screenshot from authentication check
-8. `GET /api/debug/html` - Get debug HTML for DOM inspection
+2. `GET /login` - **NEW:** Dedicated login check endpoint (returns detailed login status)
+3. `GET /api/health` - Authentication status check
+4. `GET /api/generate/image?prompt=...` - Image generation with default model (Image 4.0)
+5. `GET /api/generate/image-4.0?prompt=...` - Image generation with Image 4.0 model
+6. `GET /api/generate/nano-banana?prompt=...` - Image generation with Nano Banana model
+7. `GET /api/debug/screenshot` - Get debug screenshot (PNG) when generation fails
+8. `GET /api/debug/auth-screenshot` - Get debug screenshot from authentication check
+9. `GET /api/debug/login-screenshots` - List all login debug screenshots
+10. `GET /api/debug/html` - Get debug HTML for DOM inspection
 
 ### Dependencies
 - Flask 3.1.2 (web framework)

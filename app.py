@@ -17,12 +17,14 @@ def home():
         'message': 'Dreamina API Server is running',
         'version': '2.1.1',
         'endpoints': {
+            '/login': 'Test login functionality (GET)',
+            '/api/health': 'Health check endpoint (GET)',
             '/api/generate/image': 'Generate AI Image with default model (GET: ?prompt=...&model=image_4.0)',
             '/api/generate/image-4.0': 'Generate with Image 4.0 model (GET: ?prompt=...)',
             '/api/generate/nano-banana': 'Generate with Nano Banana model (GET: ?prompt=...)',
-            '/api/health': 'Health check endpoint (GET)',
             '/api/debug/screenshot': 'Get debug screenshot when generation fails (GET)',
-            '/api/debug/html': 'Get debug HTML when generation fails (GET)'
+            '/api/debug/html': 'Get debug HTML when generation fails (GET)',
+            '/api/debug/login-screenshots': 'List all login debug screenshots (GET)'
         },
         'supported_models': [
             'image_4.0',
@@ -34,6 +36,94 @@ def home():
             'image_1.4'
         ]
     })
+
+@app.route('/login', methods=['GET'])
+def login_check():
+    """Dedicated endpoint to test login functionality"""
+    service = None
+    try:
+        print("=" * 60)
+        print("🔐 LOGIN ENDPOINT CALLED")
+        print("=" * 60)
+        
+        service = init_service()
+        is_authenticated = service.check_authentication()
+        
+        if is_authenticated:
+            print("=" * 60)
+            print("✅ LOGIN CHECK: SUCCESSFUL")
+            print("=" * 60)
+            return jsonify({
+                'status': 'success',
+                'authenticated': True,
+                'message': 'Login successful - Dreamina authentication is working',
+                'timestamp': os.popen('date -u +"%Y-%m-%d %H:%M:%S UTC"').read().strip()
+            })
+        else:
+            print("=" * 60)
+            print("❌ LOGIN CHECK: FAILED")
+            print("=" * 60)
+            return jsonify({
+                'status': 'error',
+                'authenticated': False,
+                'message': 'Login failed - Could not authenticate with Dreamina',
+                'action_required': 'Check your DREAMINA_EMAIL and DREAMINA_PASSWORD environment variables',
+                'instructions': 'For Fly.io: Use "fly secrets set DREAMINA_EMAIL=..." and "fly secrets set DREAMINA_PASSWORD=..."',
+                'debug_info': {
+                    'login_screenshots': '/api/debug/login-screenshots',
+                    'auth_screenshot': '/api/debug/auth-screenshot'
+                },
+                'timestamp': os.popen('date -u +"%Y-%m-%d %H:%M:%S UTC"').read().strip()
+            }), 401
+            
+    except ValueError as e:
+        error_msg = str(e)
+        print("=" * 60)
+        print("❌ LOGIN CHECK: MISSING CREDENTIALS")
+        print(f"Error: {error_msg}")
+        print("=" * 60)
+        
+        if 'DREAMINA_EMAIL' in error_msg or 'DREAMINA_PASSWORD' in error_msg:
+            return jsonify({
+                'status': 'error',
+                'authenticated': False,
+                'message': 'Missing credentials - DREAMINA_EMAIL and DREAMINA_PASSWORD are required',
+                'action_required': 'Set DREAMINA_EMAIL and DREAMINA_PASSWORD as environment variables',
+                'instructions': 'For Fly.io: Use "fly secrets set DREAMINA_EMAIL=your_email@example.com" and "fly secrets set DREAMINA_PASSWORD=your_password"',
+                'error_details': error_msg,
+                'timestamp': os.popen('date -u +"%Y-%m-%d %H:%M:%S UTC"').read().strip()
+            }), 401
+        else:
+            return jsonify({
+                'status': 'error',
+                'authenticated': False,
+                'message': f'Configuration error: {error_msg}',
+                'timestamp': os.popen('date -u +"%Y-%m-%d %H:%M:%S UTC"').read().strip()
+            }), 500
+            
+    except Exception as e:
+        print("=" * 60)
+        print("❌ LOGIN CHECK: EXCEPTION")
+        print(f"Error: {str(e)}")
+        print("=" * 60)
+        
+        return jsonify({
+            'status': 'error',
+            'authenticated': False,
+            'message': f'Login check failed: {str(e)}',
+            'debug_info': {
+                'login_screenshots': '/api/debug/login-screenshots',
+                'error_details': str(e)
+            },
+            'timestamp': os.popen('date -u +"%Y-%m-%d %H:%M:%S UTC"').read().strip()
+        }), 500
+        
+    finally:
+        if service:
+            service.close()
+        print("=" * 60)
+        print("🔚 LOGIN ENDPOINT COMPLETED")
+        print("=" * 60)
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
