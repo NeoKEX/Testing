@@ -17,59 +17,32 @@ class DreaminaService:
     def __init__(self):
         self.base_url = "https://dreamina.capcut.com"
         self.home_url = "https://dreamina.capcut.com/ai-tool/home/"
-        self.cookies = self.load_cookies()
         self.driver = None
+        self.is_authenticated = False
         
-    def load_cookies(self):
-        # Try to load from file first
-        cookie_file = 'account.json'
-        if os.path.exists(cookie_file):
-            with open(cookie_file, 'r') as f:
-                data = json.load(f)
-        # If file doesn't exist, try environment variables (for Fly.io deployment)
-        elif os.environ.get('ACCOUNT_JSON'):
-            account_json = os.environ.get('ACCOUNT_JSON', '')
-            data = json.loads(account_json)
-        elif os.environ.get('ACCOUNT_JSON_BASE64'):
-            import base64
-            account_json_b64 = os.environ.get('ACCOUNT_JSON_BASE64', '')
-            decoded = base64.b64decode(account_json_b64).decode('utf-8')
-            data = json.loads(decoded)
-        else:
-            raise FileNotFoundError(
-                f"{cookie_file} not found and ACCOUNT_JSON environment variable not set. "
-                "Please create account.json using account.json.example as template or set ACCOUNT_JSON secret."
+        # Verify we have credentials
+        self.email = os.environ.get('DREAMINA_EMAIL')
+        self.password = os.environ.get('DREAMINA_PASSWORD')
+        
+        if not self.email or not self.password:
+            raise ValueError(
+                "DREAMINA_EMAIL and DREAMINA_PASSWORD environment variables are required. "
+                "Please set them in your Replit Secrets."
             )
         
-        # Handle both formats: direct array or object with 'cookies' property
-        if isinstance(data, list):
-            cookies = data
-        elif isinstance(data, dict):
-            cookies = data.get('cookies', [])
+    def ensure_authenticated(self):
+        """Ensure the user is authenticated, performing login if necessary"""
+        if self.is_authenticated:
+            return True
+        
+        print("Performing login...")
+        success = self.login_with_email(self.email, self.password)
+        if success:
+            self.is_authenticated = True
+            print("✓ Authentication successful")
         else:
-            raise ValueError("Invalid account.json format")
-        
-        if not cookies:
-            raise ValueError("No cookies found in account data")
-        
-        for cookie in cookies:
-            if 'name' not in cookie or 'value' not in cookie:
-                raise ValueError("Invalid cookie format: each cookie must have 'name' and 'value' fields")
-        
-        # Check for expired cookies (warning only, not blocking)
-        current_time = time.time()
-        expired_cookies = []
-        for cookie in cookies:
-            if 'expirationDate' in cookie:
-                exp_date = cookie['expirationDate']
-                if exp_date < current_time:
-                    expired_cookies.append(cookie['name'])
-        
-        if expired_cookies:
-            print(f"WARNING: The following cookies have expired: {', '.join(expired_cookies)}")
-            print("You may need to update your account.json with fresh cookies from Dreamina.")
-        
-        return cookies
+            print("✗ Authentication failed")
+        return success
     
     def init_driver(self):
         if self.driver is not None:
@@ -175,54 +148,155 @@ class DreaminaService:
         
         return self.driver
     
-    def apply_cookies(self):
-        driver = self.init_driver()
-        driver.get(self.base_url)
-        time.sleep(0.5)
-        
-        for cookie in self.cookies:
-            try:
-                driver.add_cookie(cookie)
-            except Exception as e:
-                print(f"Warning: Failed to add cookie {cookie.get('name')}: {str(e)}")
-        
-        driver.refresh()
-        time.sleep(1)
     
-    def check_authentication(self):
+    def login_with_email(self, email, password):
+        """Perform automated login using email and password"""
         try:
             driver = self.init_driver()
-            self.apply_cookies()
-            driver.get(f"{self.base_url}/ai-tool/generate")
+            print("Starting automated email login...")
+            
+            # Navigate to Dreamina homepage
+            driver.get(self.base_url)
+            time.sleep(3)
+            
+            # Look for and click the "Continue with email" button
+            email_button_found = False
+            email_button_selectors = [
+                (By.XPATH, "//button[contains(text(), 'Continue with email')]"),
+                (By.XPATH, "//*[contains(text(), 'Continue with email')]"),
+                (By.XPATH, "//div[contains(text(), 'Continue with email')]"),
+                (By.CSS_SELECTOR, "button[class*='email']"),
+            ]
+            
+            for selector_type, selector_value in email_button_selectors:
+                try:
+                    email_btn = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((selector_type, selector_value))
+                    )
+                    driver.execute_script("arguments[0].click();", email_btn)
+                    print("✓ Clicked 'Continue with email' button")
+                    email_button_found = True
+                    time.sleep(2)
+                    break
+                except (TimeoutException, Exception):
+                    continue
+            
+            if not email_button_found:
+                print("Could not find 'Continue with email' button, trying to find email input directly...")
+            
+            # Enter email
+            email_input_found = False
+            email_selectors = [
+                (By.CSS_SELECTOR, "input[type='email']"),
+                (By.CSS_SELECTOR, "input[placeholder*='email' i]"),
+                (By.CSS_SELECTOR, "input[name='email']"),
+                (By.XPATH, "//input[@type='text' and contains(@placeholder, 'email')]"),
+            ]
+            
+            for selector_type, selector_value in email_selectors:
+                try:
+                    email_input = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((selector_type, selector_value))
+                    )
+                    email_input.clear()
+                    email_input.send_keys(email)
+                    print("✓ Email entered")
+                    email_input_found = True
+                    time.sleep(1)
+                    break
+                except (TimeoutException, Exception):
+                    continue
+            
+            if not email_input_found:
+                raise Exception("Could not find email input field")
+            
+            # Enter password
+            password_input_found = False
+            password_selectors = [
+                (By.CSS_SELECTOR, "input[type='password']"),
+                (By.CSS_SELECTOR, "input[placeholder*='password' i]"),
+                (By.CSS_SELECTOR, "input[name='password']"),
+            ]
+            
+            for selector_type, selector_value in password_selectors:
+                try:
+                    password_input = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((selector_type, selector_value))
+                    )
+                    password_input.clear()
+                    password_input.send_keys(password)
+                    print("✓ Password entered")
+                    password_input_found = True
+                    time.sleep(1)
+                    break
+                except (TimeoutException, Exception):
+                    continue
+            
+            if not password_input_found:
+                raise Exception("Could not find password input field")
+            
+            # Click login/submit button
+            login_button_found = False
+            login_button_selectors = [
+                (By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'log in')]"),
+                (By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'sign in')]"),
+                (By.XPATH, "//button[@type='submit']"),
+                (By.CSS_SELECTOR, "button[type='submit']"),
+                (By.CSS_SELECTOR, "button[class*='submit']"),
+                (By.CSS_SELECTOR, "button[class*='login']"),
+            ]
+            
+            for selector_type, selector_value in login_button_selectors:
+                try:
+                    login_btn = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((selector_type, selector_value))
+                    )
+                    driver.execute_script("arguments[0].click();", login_btn)
+                    print("✓ Login button clicked")
+                    login_button_found = True
+                    break
+                except (TimeoutException, Exception):
+                    continue
+            
+            if not login_button_found:
+                raise Exception("Could not find or click login button")
+            
+            # Wait for login to complete
+            print("Waiting for login to complete...")
             time.sleep(5)
             
-            # Save debug screenshot for authentication check
-            try:
-                screenshot_path = '/tmp/dreamina_auth_check.png'
-                driver.save_screenshot(screenshot_path)
-                print(f"Authentication check screenshot saved to: {screenshot_path}")
-            except Exception as screenshot_err:
-                print(f"Could not save auth check screenshot: {screenshot_err}")
-            
-            page_source = driver.page_source.lower()
-            page_title = driver.title.lower()
+            # Check if login was successful
             current_url = driver.current_url
+            page_source = driver.page_source.lower()
             
-            # Check for login-related keywords
-            login_keywords = ['sign in', 'log in', 'login', 'continue with google', 'continue with tiktok', 'continue with facebook']
-            found_keywords = [kw for kw in login_keywords if kw in page_source or kw in page_title]
-            
-            if found_keywords:
-                print(f"Authentication FAILED - Found login keywords: {found_keywords}")
-                print(f"Current URL: {current_url}")
-                print(f"Page title: {driver.title}")
-                print("This usually means your cookies in account.json have expired.")
-                print("Please update account.json with fresh cookies from https://dreamina.capcut.com")
+            # Check if login was successful
+            if 'sign in' not in page_source and 'log in' not in page_source:
+                print("✓ Login successful!")
+                return True
+            else:
+                # Save debug screenshot
+                try:
+                    driver.save_screenshot('/tmp/login_failed.png')
+                    print("Login may have failed. Debug screenshot saved to /tmp/login_failed.png")
+                except:
+                    pass
                 return False
-            
-            print(f"Authentication check PASSED")
-            print(f"Current URL: {current_url}")
-            return True
+                
+        except Exception as e:
+            print(f"Login error: {str(e)}")
+            # Save debug screenshot on error
+            try:
+                if self.driver:
+                    self.driver.save_screenshot('/tmp/login_error.png')
+                    print("Debug screenshot saved to /tmp/login_error.png")
+            except:
+                pass
+            return False
+    
+    def check_authentication(self):
+        """Check if authenticated, and perform login if needed"""
+        try:
+            return self.ensure_authenticated()
         except Exception as e:
             print(f"Authentication check failed with error: {str(e)}")
             return False
@@ -240,8 +314,14 @@ class DreaminaService:
     
     def generate_image(self, prompt, aspect_ratio='1:1', quality='high', model='image_4.0'):
         try:
+            # Ensure we're authenticated before generating
+            if not self.ensure_authenticated():
+                return {
+                    'status': 'error',
+                    'message': 'Authentication failed. Cannot generate image.'
+                }
+            
             driver = self.init_driver()
-            self.apply_cookies()
             
             # Navigate to home page
             driver.get(self.home_url)

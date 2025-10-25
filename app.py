@@ -52,27 +52,34 @@ def health_check():
             return jsonify({
                 'status': 'warning',
                 'authenticated': False,
-                'message': 'Authentication failed - Your cookies in account.json have likely expired',
-                'action_required': 'Please update account.json with fresh cookies from https://dreamina.capcut.com',
-                'instructions': 'See README.md for cookie extraction instructions',
+                'message': 'Authentication failed - Unable to log in to Dreamina',
+                'action_required': 'Verify your DREAMINA_EMAIL and DREAMINA_PASSWORD environment variables are correct',
+                'instructions': 'For Replit: Check Secrets. For Fly.io: Use "fly secrets list" and "fly secrets set"',
                 'debug_screenshot': '/api/debug/auth-screenshot'
             }), 401
-    except Exception as e:
+    except ValueError as e:
         error_msg = str(e)
-        if 'expired' in error_msg.lower():
+        if 'DREAMINA_EMAIL' in error_msg or 'DREAMINA_PASSWORD' in error_msg:
             return jsonify({
                 'status': 'error',
                 'authenticated': False,
-                'message': 'Cookie validation failed - Expired cookies detected',
-                'action_required': 'Please update account.json with fresh cookies',
+                'message': 'Missing credentials - DREAMINA_EMAIL and DREAMINA_PASSWORD are required',
+                'action_required': 'Set DREAMINA_EMAIL and DREAMINA_PASSWORD as environment variables',
+                'instructions': 'For Replit: Add to Secrets. For Fly.io: Use "fly secrets set DREAMINA_EMAIL=..." and "fly secrets set DREAMINA_PASSWORD=..."',
                 'error_details': error_msg
             }), 401
         else:
             return jsonify({
                 'status': 'error',
                 'authenticated': False,
-                'message': f'Health check failed: {error_msg}'
+                'message': f'Configuration error: {error_msg}'
             }), 500
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'authenticated': False,
+            'message': f'Health check failed: {str(e)}'
+        }), 500
     finally:
         if service:
             service.close()
