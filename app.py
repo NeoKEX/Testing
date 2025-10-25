@@ -15,7 +15,7 @@ def home():
     return jsonify({
         'status': 'success',
         'message': 'Dreamina API Server is running',
-        'version': '1.1.1',
+        'version': '2.1.0',
         'endpoints': {
             '/api/generate/image': 'Generate AI Image with default model (GET: ?prompt=...&model=image_4.0)',
             '/api/generate/image-4.0': 'Generate with Image 4.0 model (GET: ?prompt=...)',
@@ -274,6 +274,58 @@ def generate_nano_banana():
         if service:
             service.close()
 
+def startup_login():
+    """Perform login on server startup"""
+    print("="*60)
+    print("🚀 DREAMINA API SERVER STARTUP")
+    print("="*60)
+    
+    service = None
+    try:
+        print("🔐 Initiating login process...")
+        service = init_service()
+        is_authenticated = service.check_authentication()
+        
+        if is_authenticated:
+            print("="*60)
+            print("✅ LOGIN SUCCESSFUL")
+            print("="*60)
+            print("✓ Server is authenticated and ready to process requests")
+            print("="*60)
+        else:
+            print("="*60)
+            print("❌ LOGIN FAILED")
+            print("="*60)
+            print("✗ Authentication failed - Unable to log in to Dreamina")
+            print("✗ Please verify your DREAMINA_EMAIL and DREAMINA_PASSWORD")
+            print("✗ For Fly.io: Use 'fly secrets list' to check secrets")
+            print("="*60)
+            
+    except ValueError as e:
+        error_msg = str(e)
+        print("="*60)
+        print("❌ LOGIN FAILED - MISSING CREDENTIALS")
+        print("="*60)
+        print(f"✗ Error: {error_msg}")
+        print("✗ Set DREAMINA_EMAIL and DREAMINA_PASSWORD as secrets")
+        print("✗ For Fly.io: Use 'fly secrets set DREAMINA_EMAIL=...'")
+        print("="*60)
+        
+    except Exception as e:
+        print("="*60)
+        print("❌ LOGIN FAILED - UNEXPECTED ERROR")
+        print("="*60)
+        print(f"✗ Error: {str(e)}")
+        print("="*60)
+        
+    finally:
+        if service:
+            service.close()
+    
+    print("\n🌐 Starting Flask server...")
+    print("="*60)
+
 if __name__ == '__main__':
+    startup_login()
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False)

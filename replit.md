@@ -18,7 +18,15 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 
 ## Recent Changes (October 25, 2025)
 
-### v2.0.0 - Email/Password Authentication (Latest)
+### v2.1.0 - Startup Login (Latest)
+- **🚀 NEW: Automatic Login on Server Startup** - Server now performs authentication when it starts
+  - Login process executes before Flask accepts any requests
+  - Clear success/failure logging with visual indicators (✅/❌)
+  - Detailed error messages for missing credentials or authentication failures
+  - Optimized for Fly.io deployment with helpful troubleshooting hints
+  - Ensures server is ready to process requests immediately after startup
+
+### v2.0.0 - Email/Password Authentication
 - **🔐 MAJOR CHANGE: Removed cookie-based authentication** - Now uses automated email/password login
   - No need to extract or manage cookies
   - Automatically logs in using DREAMINA_EMAIL and DREAMINA_PASSWORD environment variables
