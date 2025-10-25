@@ -16,6 +16,8 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - **Fixed stale element error** - Improved Selenium reliability with element refetching
 
 ## Recent Changes (October 25, 2025)
+- **Improved button detection** - Multiple fallback selectors for generate button and prompt input
+- **Enhanced Selenium reliability** - JavaScript click fallback and better error messages
 - **Fixed Selenium stale element reference error** - Elements now refetched inside retry functions
 - **Removed unnecessary model endpoints** - Kept only Image 4.0 and Nano Banana models
 - **Removed mock mode** - API runs in production mode by default

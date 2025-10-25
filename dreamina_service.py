@@ -172,34 +172,52 @@ class DreaminaService:
             driver.get(f"{self.base_url}/ai-tool/generate")
             time.sleep(5)
             
-            # Find and fill prompt input with retry logic
+            # Find and fill prompt input with retry logic - try multiple selectors
             max_retries = 3
             prompt_entered = False
+            
+            # List of input selectors to try
+            input_selectors = [
+                (By.CSS_SELECTOR, "textarea[placeholder*='prompt' i]"),
+                (By.CSS_SELECTOR, "textarea[placeholder*='Prompt' i]"),
+                (By.CSS_SELECTOR, "textarea"),
+                (By.CSS_SELECTOR, "input[type='text'][placeholder*='prompt' i]"),
+                (By.CSS_SELECTOR, "input[type='text']"),
+                (By.XPATH, "//textarea[contains(@placeholder, 'prompt') or contains(@placeholder, 'Prompt')]"),
+                (By.XPATH, "//input[@type='text' and (contains(@placeholder, 'prompt') or contains(@placeholder, 'Prompt'))]"),
+            ]
+            
             for attempt in range(max_retries):
-                try:
-                    # Refetch element on each attempt to avoid stale element
-                    def enter_prompt():
-                        prompt_input = WebDriverWait(driver, 15).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, "textarea[placeholder*='prompt' i], textarea, input[type='text']"))
-                        )
-                        time.sleep(0.5)
-                        prompt_input.click()
-                        time.sleep(0.3)
-                        prompt_input.clear()
-                        time.sleep(0.3)
-                        prompt_input.send_keys(prompt)
-                        time.sleep(0.5)
-                        return True
-                    
-                    self._retry_on_stale(enter_prompt)
-                    prompt_entered = True
+                for selector_type, selector_value in input_selectors:
+                    try:
+                        # Refetch element on each attempt to avoid stale element
+                        def enter_prompt():
+                            prompt_input = WebDriverWait(driver, 5).until(
+                                EC.presence_of_element_located((selector_type, selector_value))
+                            )
+                            time.sleep(0.5)
+                            prompt_input.click()
+                            time.sleep(0.3)
+                            prompt_input.clear()
+                            time.sleep(0.3)
+                            prompt_input.send_keys(prompt)
+                            time.sleep(0.5)
+                            return True
+                        
+                        self._retry_on_stale(enter_prompt)
+                        prompt_entered = True
+                        print(f"Successfully entered prompt using selector: {selector_value}")
+                        break
+                    except (StaleElementReferenceException, TimeoutException):
+                        continue
+                    except Exception as e:
+                        continue
+                
+                if prompt_entered:
                     break
-                except (StaleElementReferenceException, TimeoutException) as e:
-                    if attempt == max_retries - 1:
-                        return {
-                            'status': 'error',
-                            'message': f'Failed to find prompt input after {max_retries} attempts: {str(e)}. Please check if authentication is valid.'
-                        }
+                    
+                if attempt < max_retries - 1:
+                    print(f"Prompt input attempt {attempt + 1} failed, retrying...")
                     time.sleep(2)
             
             if not prompt_entered:
@@ -208,35 +226,79 @@ class DreaminaService:
                     'message': 'Failed to enter prompt. Please check if authentication is valid.'
                 }
             
-            # Click generate button with retry logic
+            # Click generate button with retry logic - try multiple selectors
             time.sleep(2)
             button_clicked = False
+            
+            # List of button selectors to try (in order of preference)
+            button_selectors = [
+                # Try by text content (case insensitive)
+                (By.XPATH, "//button[contains(translate(., 'GENERATE', 'generate'), 'generate')]"),
+                (By.XPATH, "//button[contains(translate(., 'CREATE', 'create'), 'create')]"),
+                # Try by common class patterns
+                (By.CSS_SELECTOR, "button[class*='generate']"),
+                (By.CSS_SELECTOR, "button[class*='submit']"),
+                (By.CSS_SELECTOR, "button[class*='create']"),
+                # Try by type
+                (By.XPATH, "//button[@type='submit']"),
+                # Try any button with generate-related attributes
+                (By.XPATH, "//button[contains(@class, 'generate') or contains(@id, 'generate')]"),
+                # Fallback: any visible primary-looking button
+                (By.CSS_SELECTOR, "button[class*='primary']"),
+            ]
+            
             for attempt in range(max_retries):
-                try:
-                    # Refetch element on each attempt to avoid stale element
-                    def click_button():
-                        generate_button = WebDriverWait(driver, 15).until(
-                            EC.element_to_be_clickable((By.XPATH, "//button[contains(translate(text(), 'GENERATE', 'generate'), 'generate') or contains(translate(text(), 'CREATE', 'create'), 'create')]"))
-                        )
-                        time.sleep(0.5)
-                        generate_button.click()
-                        return True
-                    
-                    self._retry_on_stale(click_button)
-                    button_clicked = True
+                for selector_type, selector_value in button_selectors:
+                    try:
+                        def click_button():
+                            generate_button = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable((selector_type, selector_value))
+                            )
+                            time.sleep(0.5)
+                            # Try clicking with JavaScript as backup
+                            try:
+                                generate_button.click()
+                            except:
+                                driver.execute_script("arguments[0].click();", generate_button)
+                            return True
+                        
+                        self._retry_on_stale(click_button)
+                        button_clicked = True
+                        print(f"Successfully clicked button using selector: {selector_value}")
+                        break
+                    except (StaleElementReferenceException, TimeoutException):
+                        continue
+                    except Exception as e:
+                        print(f"Selector {selector_value} failed: {str(e)[:100]}")
+                        continue
+                
+                if button_clicked:
                     break
-                except (StaleElementReferenceException, TimeoutException) as e:
-                    if attempt == max_retries - 1:
-                        return {
-                            'status': 'error',
-                            'message': f'Failed to click generate button after {max_retries} attempts: {str(e)}'
-                        }
-                    time.sleep(2)
+                    
+                if attempt < max_retries - 1:
+                    print(f"Button click attempt {attempt + 1} failed, retrying...")
+                    time.sleep(3)
             
             if not button_clicked:
+                # Debug: Try to find all buttons and log them
+                try:
+                    all_buttons = driver.find_elements(By.TAG_NAME, "button")
+                    button_info = []
+                    for btn in all_buttons[:10]:  # Limit to first 10
+                        try:
+                            text = btn.text[:50] if btn.text else "No text"
+                            classes = btn.get_attribute('class')[:50] if btn.get_attribute('class') else "No class"
+                            button_info.append(f"Button: '{text}' | Class: '{classes}'")
+                        except:
+                            continue
+                    debug_msg = " | ".join(button_info) if button_info else "No buttons found"
+                    print(f"Available buttons: {debug_msg}")
+                except:
+                    pass
+                
                 return {
                     'status': 'error',
-                    'message': 'Failed to click generate button. Please try again.'
+                    'message': 'Failed to click generate button after trying multiple selectors. The page structure may have changed or authentication failed.'
                 }
             
             # Wait for image generation
