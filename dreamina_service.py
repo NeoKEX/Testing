@@ -128,7 +128,7 @@ class DreaminaService:
     def apply_cookies(self):
         driver = self.init_driver()
         driver.get(self.base_url)
-        time.sleep(2)
+        time.sleep(1)
         
         for cookie in self.cookies:
             try:
@@ -137,7 +137,7 @@ class DreaminaService:
                 print(f"Warning: Failed to add cookie {cookie.get('name')}: {str(e)}")
         
         driver.refresh()
-        time.sleep(3)
+        time.sleep(2)
     
     def check_authentication(self):
         try:
@@ -172,7 +172,7 @@ class DreaminaService:
             
             # Navigate to home page first
             driver.get(self.home_url)
-            time.sleep(5)
+            time.sleep(3)
             
             print(f"Navigated to: {driver.current_url}")
             print(f"Page title: {driver.title}")
@@ -200,13 +200,13 @@ class DreaminaService:
                             prompt_input = WebDriverWait(driver, 5).until(
                                 EC.presence_of_element_located((selector_type, selector_value))
                             )
-                            time.sleep(0.5)
+                            time.sleep(0.3)
                             prompt_input.click()
-                            time.sleep(0.3)
+                            time.sleep(0.2)
                             prompt_input.clear()
-                            time.sleep(0.3)
+                            time.sleep(0.2)
                             prompt_input.send_keys(prompt)
-                            time.sleep(0.5)
+                            time.sleep(0.3)
                             return True
                         
                         self._retry_on_stale(enter_prompt)
@@ -232,7 +232,7 @@ class DreaminaService:
                 }
             
             # Click generate button with retry logic - try multiple selectors
-            time.sleep(2)
+            time.sleep(1)
             button_clicked = False
             
             # List of button selectors to try (in order of preference)
@@ -265,7 +265,7 @@ class DreaminaService:
                             generate_button = WebDriverWait(driver, 5).until(
                                 EC.element_to_be_clickable((selector_type, selector_value))
                             )
-                            time.sleep(0.5)
+                            time.sleep(0.3)
                             # Try clicking with JavaScript as backup
                             try:
                                 generate_button.click()
@@ -312,40 +312,94 @@ class DreaminaService:
                     'message': 'Failed to click generate button after trying multiple selectors. The page structure may have changed or authentication failed.'
                 }
             
-            # Wait for image generation
-            print("Waiting for image generation...")
-            time.sleep(15)
+            # Capture existing images BEFORE generation to filter them out later
+            print("Capturing existing images before generation...")
+            existing_image_urls = set()
+            try:
+                existing_images = driver.find_elements(By.TAG_NAME, "img")
+                for img in existing_images:
+                    try:
+                        src = img.get_attribute('src')
+                        if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
+                            existing_image_urls.add(src)
+                    except:
+                        continue
+                print(f"Found {len(existing_image_urls)} existing images on page")
+            except Exception as e:
+                print(f"Warning: Could not capture existing images: {str(e)}")
             
-            # Retry finding generated images
+            # Wait for image generation with incremental checks
+            print("Waiting for image generation...")
+            max_wait_time = 30
+            wait_interval = 3
+            total_waited = 0
+            new_images_found = False
+            
+            while total_waited < max_wait_time and not new_images_found:
+                time.sleep(wait_interval)
+                total_waited += wait_interval
+                
+                # Check if new images have appeared
+                try:
+                    current_images = driver.find_elements(By.TAG_NAME, "img")
+                    current_count = 0
+                    for img in current_images:
+                        try:
+                            src = img.get_attribute('src')
+                            if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
+                                if src not in existing_image_urls:
+                                    current_count += 1
+                        except:
+                            continue
+                    
+                    if current_count >= 4:
+                        new_images_found = True
+                        print(f"Found {current_count} new images after {total_waited} seconds")
+                    elif total_waited < max_wait_time:
+                        print(f"Waiting... ({total_waited}s, found {current_count} new images so far)")
+                except Exception as e:
+                    print(f"Check failed: {str(e)}")
+            
+            # Extract only NEW generated images
             for attempt in range(max_retries):
                 try:
                     images = driver.find_elements(By.TAG_NAME, "img")
-                    image_urls = []
+                    new_image_urls = []
                     for img in images:
                         try:
                             src = img.get_attribute('src')
                             if src and ('ibyteimg.com' in src or 'bytedance' in src or 'capcut' in src):
-                                if src not in image_urls:
-                                    image_urls.append(src)
+                                # Only include images that weren't there before
+                                if src not in existing_image_urls and src not in new_image_urls:
+                                    new_image_urls.append(src)
                         except StaleElementReferenceException:
                             continue
                     
-                    if image_urls:
+                    if new_image_urls:
+                        # Dreamina typically generates 4 images
+                        expected_count = 4
+                        if len(new_image_urls) < expected_count and attempt < max_retries - 1:
+                            print(f"Found only {len(new_image_urls)} images, waiting for more...")
+                            time.sleep(3)
+                            continue
+                        
+                        print(f"Successfully extracted {len(new_image_urls)} newly generated images")
                         return {
                             'status': 'success',
                             'prompt': prompt,
                             'model': model,
                             'aspect_ratio': aspect_ratio,
                             'quality': quality,
-                            'images': image_urls,
-                            'count': len(image_urls)
+                            'images': new_image_urls,
+                            'count': len(new_image_urls)
                         }
                     elif attempt < max_retries - 1:
-                        time.sleep(5)
+                        print(f"No new images found yet, retrying... (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(3)
                     else:
                         return {
                             'status': 'error',
-                            'message': 'No generated images found. Generation may still be in progress or failed.'
+                            'message': 'No new generated images found. Generation may have failed or timed out.'
                         }
                 except Exception as e:
                     if attempt == max_retries - 1:
@@ -353,7 +407,7 @@ class DreaminaService:
                             'status': 'error',
                             'message': f'Failed to retrieve generated images: {str(e)}'
                         }
-                    time.sleep(5)
+                    time.sleep(3)
                 
         except Exception as e:
             return {
