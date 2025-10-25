@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import glob
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -25,7 +26,14 @@ class DreaminaService:
         
         with open(cookie_file, 'r') as f:
             data = json.load(f)
-            cookies = data.get('cookies', [])
+            
+            # Handle both formats: direct array or object with 'cookies' property
+            if isinstance(data, list):
+                cookies = data
+            elif isinstance(data, dict):
+                cookies = data.get('cookies', [])
+            else:
+                raise ValueError("Invalid account.json format")
             
         if not cookies:
             raise ValueError("No cookies found in account.json")
@@ -41,18 +49,33 @@ class DreaminaService:
             return self.driver
             
         chrome_options = Options()
-        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--headless=new')
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
+        # Find chromium binary in Nix store
+        chromium_paths = glob.glob('/nix/store/*-chromium-*/bin/chromium')
+        if chromium_paths:
+            chrome_options.binary_location = chromium_paths[0]
+            
+        # Find chromedriver binary in Nix store
+        chromedriver_paths = glob.glob('/nix/store/*-chromedriver-*/bin/chromedriver')
+        
         try:
-            self.driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()),
-                options=chrome_options
-            )
+            if chromedriver_paths:
+                # Use system chromedriver
+                service = Service(chromedriver_paths[0])
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            else:
+                # Fallback to webdriver-manager
+                self.driver = webdriver.Chrome(
+                    service=Service(ChromeDriverManager().install()),
+                    options=chrome_options
+                )
         except Exception as e:
             raise Exception(f"Failed to initialize Chrome driver: {str(e)}")
         
