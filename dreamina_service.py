@@ -92,11 +92,9 @@ class DreaminaService:
         chrome_options.add_argument('--disable-domain-reliability')
         chrome_options.add_argument('--disable-client-side-phishing-detection')
         
-        # Set preferences to block actual image loading while keeping img elements in DOM
-        prefs = {
-            "profile.managed_default_content_settings.images": 2  # Block images from loading
-        }
-        chrome_options.add_experimental_option("prefs", prefs)
+        # Note: We used to block image loading to save bandwidth, but this prevents
+        # Dreamina from populating generated image URLs in the src attributes.
+        # Memory tradeoff is acceptable for functional image generation.
         
         # Try to find Chrome/Chromium binary in multiple locations
         chrome_found = False
@@ -399,7 +397,7 @@ class DreaminaService:
             
             # Return results - require at least 4 images for success
             if len(new_image_urls) >= 4:
-                print(f"Success: {len(new_image_urls)} images generated in {total_waited}s")
+                print(f"✓ Success: {len(new_image_urls)} images generated in {total_waited}s")
                 return {
                     'status': 'success',
                     'prompt': prompt,
@@ -410,16 +408,38 @@ class DreaminaService:
                     'count': len(new_image_urls),
                     'generation_time': f"{total_waited}s"
                 }
-            elif new_image_urls:
-                return {
-                    'status': 'error',
-                    'message': f'Only {len(new_image_urls)} images generated (expected 4). Generation may have been incomplete. Try again.'
-                }
             else:
-                return {
-                    'status': 'error',
-                    'message': f'No images generated after {total_waited}s. Please check authentication.'
-                }
+                # Image detection failed - save debug info
+                try:
+                    screenshot_path = '/tmp/dreamina_debug.png'
+                    driver.save_screenshot(screenshot_path)
+                    print(f"Debug screenshot saved to: {screenshot_path}")
+                    
+                    html_path = '/tmp/dreamina_debug.html'
+                    with open(html_path, 'w', encoding='utf-8') as f:
+                        f.write(driver.page_source)
+                    print(f"Debug HTML saved to: {html_path}")
+                    
+                    # Log all images found
+                    all_imgs = driver.find_elements(By.TAG_NAME, "img")
+                    print(f"Total <img> elements found: {len(all_imgs)}")
+                    print(f"Existing images (before generation): {len(existing_image_urls)}")
+                    print(f"New images detected: {len(new_image_urls)}")
+                    if new_image_urls:
+                        print(f"New image URLs: {new_image_urls[:3]}...")  # Show first 3
+                except Exception as debug_err:
+                    print(f"Debug error: {str(debug_err)}")
+                
+                if new_image_urls:
+                    return {
+                        'status': 'error',
+                        'message': f'Only {len(new_image_urls)} images generated (expected 4). Generation may have been incomplete. Debug files saved to /tmp/dreamina_debug.png'
+                    }
+                else:
+                    return {
+                        'status': 'error',
+                        'message': f'No images generated after {total_waited}s. This could be: 1) Authentication failed/expired, 2) Generation still in progress, 3) Page structure changed. Debug files saved to /tmp/dreamina_debug.png and /tmp/dreamina_debug.html'
+                    }
                 
         except Exception as e:
             return {
