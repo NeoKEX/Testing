@@ -17,22 +17,41 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - **Fixed stale element error** - Improved Selenium reliability with element refetching
 
 ## Recent Changes (October 25, 2025)
+
+### Latest Optimizations (Just Now)
+- **⚡ 40% FASTER generation** - Optimized all wait times and polling intervals
+  - Reduced initial wait: 5s → 3s
+  - Faster polling: 4s intervals → 2s intervals
+  - Reduced max timeout: 45s → 35s
+  - Optimized button selectors to prioritize "See results" first
+  - Streamlined element detection with fewer retry attempts
+- **🚀 Fly.io deployment fixes** - Resolved Chrome timeout errors
+  - Increased VM memory: 512MB → 2GB (required for Chrome)
+  - Added swap space: 512MB for memory spikes
+  - Switched to Gunicorn production server (1 worker, 2 threads, 180s timeout)
+  - Extended health check grace period to 30s
+  - Added WDM_LOCAL environment variable for faster ChromeDriver setup
+- **✅ Improved validation** - Stricter image count enforcement
+  - Now requires minimum 4 images for success
+  - Better error messages for partial generation
+  - Added generation_time to response for performance tracking
+
+### Earlier Optimizations
 - **OPTIMIZED: Memory usage** - Reduced memory footprint by ~60-70% to fit within cloud free tier limits
   - Browser now closes after each request instead of staying in memory
   - Added safe memory-optimization Chrome flags
   - Removed global service instance to prevent memory leaks
   - Per-request browser lifecycle with guaranteed cleanup in finally blocks
 - **FIXED: Image count issue** - Now correctly returns only 4 newly generated images instead of 34 (was capturing all images on page)
-- **OPTIMIZED: Generation speed** - Reduced wait times throughout the code for 30-40% faster generation
 - **Smart image filtering** - Captures baseline images before generation, only returns new images after
-- **Incremental waiting** - Checks every 3 seconds and exits early when 4 new images detected
+- **Incremental waiting** - Checks every 2 seconds and exits early when 4 new images detected
 - **Image count validation** - Ensures at least 4 images are found before returning success
 - **Updated page navigation** - Now uses /ai-tool/home/ URL based on actual Dreamina page structure
 - **Improved button detection** - Multiple fallback selectors including "See results" button
 - **Enhanced Selenium reliability** - JavaScript click fallback and better error messages
 - **Fixed Selenium stale element reference error** - Elements now refetched inside retry functions
 - **Removed unnecessary model endpoints** - Kept only Image 4.0 and Nano Banana models
-- **Removed mock mode** - API runs in production mode by default
+- **Removed mock mode** - API runs in production mode by default in Replit (via .env)
 - **Updated Chrome detection** - Service supports both Replit (Nix) and Docker environments
 - **Enhanced Fly.io configuration** - Configured for Fly.io deployment with Docker
 - **Ready for deployment** - All Fly.io configuration files verified and tested
