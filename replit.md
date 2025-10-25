@@ -7,23 +7,25 @@ Backend-only Flask REST API that wraps Dreamina's AI image generation service us
 Provides a programmatic API interface to Dreamina's image generation capabilities since Dreamina doesn't offer a public API.
 
 ## Current State
-- Flask API server running on port 8080 in production mode (mock mode removed)
-- Single working endpoint: `/api/generate/image` (GET)
-- Unimplemented endpoints return HTTP 501: `/api/generate/video`, `/api/status/<task_id>`
+- Flask API server running on port 8080 in production mode
+- **Two model endpoints available**: Image 4.0 and Nano Banana
+- Three total endpoints: `/api/generate/image`, `/api/generate/image-4.0`, `/api/generate/nano-banana`
 - Cookie-based authentication via `account.json` file
-- Configured for deployment on Render free tier with automatic Chrome installation
+- **Ready for Render deployment** with Docker configuration
 - Cross-environment support: works on both Replit (Nix) and Render
+- **Fixed stale element error** - Improved Selenium reliability with element refetching
 
 ## Recent Changes (October 25, 2025)
-- **Removed mock mode** - API now runs in production mode by default
+- **Fixed Selenium stale element reference error** - Elements now refetched inside retry functions
+- **Removed unnecessary model endpoints** - Kept only Image 4.0 and Nano Banana models
+- **Removed mock mode** - API runs in production mode by default
 - **Updated Chrome detection** - Service supports both Replit (Nix) and Render environments
-- **Enhanced render.yaml** - Added automatic Chrome installation for Render deployments
-- **Updated workflow** - Removed MOCK_MODE environment variable
+- **Enhanced render.yaml** - Configured for Render deployment with Docker
+- **Ready for deployment** - All Render configuration files verified and tested
 - Created Flask API server with CORS support
 - Implemented Selenium-based Dreamina service with cookie authentication
 - Added cookie validation and WebDriver lifecycle management
 - Added comprehensive README with API documentation
-- Documented current limitations (aspect_ratio, quality, model parameters not yet implemented)
 
 ## Project Architecture
 
@@ -40,9 +42,9 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 ### API Endpoints
 1. `GET /` - API information and health
 2. `GET /api/health` - Authentication status check
-3. `GET /api/generate/image?prompt=...` - Image generation (working)
-4. `GET /api/generate/video?prompt=...` - Returns 501 (not implemented)
-5. `GET /api/status/<task_id>` - Returns 501 (not implemented)
+3. `GET /api/generate/image?prompt=...` - Image generation with default model (Image 4.0)
+4. `GET /api/generate/image-4.0?prompt=...` - Image generation with Image 4.0 model
+5. `GET /api/generate/nano-banana?prompt=...` - Image generation with Nano Banana model
 
 ### Dependencies
 - Flask 3.1.2 (web framework)
@@ -63,8 +65,59 @@ Provides a programmatic API interface to Dreamina's image generation capabilitie
 - Requires Chrome/Chromium for Selenium
 - Slower than direct API calls due to browser automation
 - Cookie sessions may expire and require renewal
-- Video generation not implemented
-- Task status checking not implemented
+- Only two models supported: Image 4.0 and Nano Banana
+
+## Render Deployment Guide
+
+### Prerequisites
+1. Active Render account (https://render.com)
+2. Valid Dreamina cookies in `account.json` format
+3. Git repository with this code
+
+### Deployment Steps
+1. **Push code to GitHub/GitLab**
+   - Ensure all files are committed
+   - Push to your repository
+
+2. **Create New Web Service on Render**
+   - Go to Render Dashboard
+   - Click "New +" → "Web Service"
+   - Connect your repository
+   - Render will auto-detect `render.yaml`
+
+3. **Add Secret File (CRITICAL)**
+   - Go to your service settings
+   - Navigate to "Secret Files" section
+   - Click "Add Secret File"
+   - Filename: `account.json`
+   - Contents: Your Dreamina cookies JSON (from account.json)
+   - Click "Save"
+
+4. **Environment Variables** (Optional - already set in render.yaml)
+   - PORT: 8080 (auto-configured)
+   - FLASK_ENV: production (auto-configured)
+
+5. **Deploy**
+   - Click "Create Web Service"
+   - Render will build the Docker image (takes 5-10 minutes first time)
+   - Wait for deployment to complete
+
+6. **Test Your API**
+   - Your API will be available at: `https://your-service-name.onrender.com`
+   - Test health endpoint: `https://your-service-name.onrender.com/api/health`
+   - Test image generation: `https://your-service-name.onrender.com/api/generate/image-4.0?prompt=test`
+
+### Deployment Configuration
+- **Docker**: Automatically installs Chrome + ChromeDriver
+- **Port**: 8080 (configured in Dockerfile and render.yaml)
+- **Free Tier**: 512MB RAM (sufficient for basic usage)
+- **Auto-deploy**: Enabled on git push
+
+### Troubleshooting Deployment
+- **Build fails**: Check Docker build logs for missing dependencies
+- **Authentication fails**: Verify account.json is added as secret file
+- **Service crashes**: Check logs for ChromeDriver/Chrome version mismatch
+- **Slow performance**: Free tier has limited resources, consider upgrading
 
 ## Setup Instructions
 1. Extract Dreamina cookies from browser after logging in
