@@ -86,18 +86,29 @@ class DreaminaService:
             print("Chrome/Chromium binary not found in standard locations, using default")
             
         # Find chromedriver binary
-        chromedriver_paths = sorted(glob.glob('/nix/store/*-chromedriver-*/bin/chromedriver'))
+        chromedriver_path = None
+        
+        # 1. Check environment variable (Docker/Render)
+        if os.environ.get('CHROMEDRIVER_PATH') and os.path.exists(os.environ.get('CHROMEDRIVER_PATH')):
+            chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
+            print(f"Using ChromeDriver from environment: {chromedriver_path}")
+        # 2. Check Nix store (Replit)
+        else:
+            chromedriver_paths = sorted(glob.glob('/nix/store/*-chromedriver-*/bin/chromedriver'))
+            if chromedriver_paths:
+                chromedriver_path = chromedriver_paths[-1]
+                print(f"Using ChromeDriver from Nix: {chromedriver_path}")
+            # 3. Check standard locations
+            elif os.path.exists('/usr/local/bin/chromedriver'):
+                chromedriver_path = '/usr/local/bin/chromedriver'
+                print(f"Using ChromeDriver from /usr/local/bin")
+            elif os.path.exists('/usr/bin/chromedriver'):
+                chromedriver_path = '/usr/bin/chromedriver'
+                print(f"Using ChromeDriver from /usr/bin")
         
         try:
-            if chromedriver_paths:
-                # Use Nix chromedriver (Replit)
-                service = Service(chromedriver_paths[-1])
-                print(f"Using ChromeDriver from Nix: {chromedriver_paths[-1]}")
-                self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            elif os.path.exists('/usr/bin/chromedriver'):
-                # Use system chromedriver (Render)
-                service = Service('/usr/bin/chromedriver')
-                print(f"Using ChromeDriver from system: /usr/bin/chromedriver")
+            if chromedriver_path:
+                service = Service(chromedriver_path)
                 self.driver = webdriver.Chrome(service=service, options=chrome_options)
             else:
                 # Fallback to webdriver-manager
